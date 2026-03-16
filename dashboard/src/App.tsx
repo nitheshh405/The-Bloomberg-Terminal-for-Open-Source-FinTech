@@ -112,7 +112,7 @@ export default function App() {
   const [chatMessages, setChatMessages] = useState([
     {
       role: "assistant" as const,
-      text: "Hello! I'm your FinTech OSINT intelligence assistant. Ask me anything about the open-source fintech ecosystem — emerging technologies, compliance implications, disruption signals, or startup opportunities.",
+      text: "Hello! I'm the FinTech Intelligence Terminal AI — your analyst across 47,000+ open-source FinTech repositories. Ask me about emerging technologies, compliance risks, disruption signals, startup opportunities, or the monthly GitKT OSS Index.",
     },
   ]);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -236,8 +236,8 @@ export default function App() {
         <div className="flex items-center gap-2.5 border-b border-gray-800 px-4 py-4">
           <BarChart2 className="h-6 w-6 text-blue-400 shrink-0" />
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-white">FinTech OSINT</p>
-            <p className="text-xs text-gray-500">Intelligence Platform</p>
+            <p className="truncate text-sm font-bold text-white">FinTech Intelligence Terminal</p>
+            <p className="text-xs text-gray-500">Open-Source Finance Intelligence</p>
           </div>
         </div>
 

@@ -144,7 +144,7 @@ async def run_single_agent(agent_name: str, output_json: str = "") -> Dict[str, 
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="FinTech OSINT Pipeline Runner")
+    parser = argparse.ArgumentParser(description="FinTech Intelligence Terminal Pipeline Runner")
     parser.add_argument("--agent", help="Run a specific agent only")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--output-json", default="", help="Save result to JSON file")

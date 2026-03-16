@@ -11,7 +11,7 @@ arXiv submission notes
 ───────────────────────
   Category : cs.IR (Information Retrieval) or q-fin.CP (Computational Finance)
   License  : CC BY 4.0
-  Authors  : GitKT Intelligence Platform; Nithesh Gudipuri
+  Authors  : FinTech Intelligence Terminal; Nithesh Gudipuri
   Format   : PDFLaTeX — submit the .tex + no additional style files needed
 
 SSRN submission notes
@@ -162,7 +162,7 @@ def render_latex(index: GitKTIndex) -> str:
         linkcolor=blue,
         urlcolor=blue,
         pdftitle={{GitKT FinTech OSS Index -- {period_label}}},
-        pdfauthor={{GitKT Intelligence Platform}},
+        pdfauthor={{FinTech Intelligence Terminal}},
     }}
 
     \title{{
@@ -170,7 +170,7 @@ def render_latex(index: GitKTIndex) -> str:
         \large Monthly Report -- {period_label}
     }}
     \author{{
-        GitKT Intelligence Platform\\
+        FinTech Intelligence Terminal\\
         \textit{{Autonomous AI Swarm Research Division}}\\[0.5em]
         \small Nithesh Gudipuri (Creator \& Lead Architect)\\
         \small \href{{https://github.com/nitheshh405/The-Bloomberg-Terminal-for-Open-Source-FinTech}}%
@@ -321,7 +321,7 @@ def render_latex(index: GitKTIndex) -> str:
     \section{{How to Cite}}
 
     \begin{{quote}}
-    Gudipuri, N., \& GitKT Intelligence Platform. ({index.published_at.year}).
+    Gudipuri, N., \& FinTech Intelligence Terminal. ({index.published_at.year}).
     \textit{{GitKT FinTech OSS Index -- {period_label}}}.
     GitKT Research. \url{{https://github.com/nitheshh405/The-Bloomberg-Terminal-for-Open-Source-FinTech}}
     \end{{quote}}
@@ -329,7 +329,7 @@ def render_latex(index: GitKTIndex) -> str:
     \vfill
     \hrule
     \small
-    \textit{{Generated autonomously by the GitKT Intelligence Platform.
+    \textit{{Generated autonomously by the FinTech Intelligence Terminal.
     Data sourced from public GitHub/GitLab APIs, arXiv, USPTO PatentsView, and curated
     regulatory sandbox registries. This report is licensed under CC BY 4.0.}}
 
@@ -459,7 +459,7 @@ prediction accuracy. Full methodology and source code available at:
 
 ```bibtex
 @techreport{{gitkt-index-{index.period.replace("-", "")},
-  author  = {{Gudipuri, Nithesh and {{GitKT Intelligence Platform}}}},
+  author  = {{Gudipuri, Nithesh and {{FinTech Intelligence Terminal}}}},
   title   = {{GitKT FinTech OSS Index -- {index.period}}},
   year    = {{{index.published_at.year}}},
   month   = {{{index.published_at.month}}},

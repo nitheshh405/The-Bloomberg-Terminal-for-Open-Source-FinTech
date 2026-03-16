@@ -1,5 +1,5 @@
 """
-Base Agent class for the FinTech OSINT Platform.
+Base Agent class for the FinTech Intelligence Terminal.
 All specialized agents extend this class and share:
 - Structured logging
 - Neo4j connection via shared driver

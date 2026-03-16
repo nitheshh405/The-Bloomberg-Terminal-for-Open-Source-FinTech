@@ -1,6 +1,6 @@
 """
 FastAPI Application Entry Point
-FinTech OSINT Platform REST API
+FinTech Intelligence Terminal REST API
 """
 
 from __future__ import annotations
