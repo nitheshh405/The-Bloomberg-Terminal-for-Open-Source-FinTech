@@ -1,4 +1,5 @@
-# FinTech OSINT Platform — System Architecture
+# GitKT — System Architecture
+> Created and architected by **Nithesh Gudipuri**
 
 ## 1. Full System Architecture
 
