@@ -1,6 +1,6 @@
 """
 Conversational AI Router
-Natural language interface over the FinTech OSINT knowledge graph.
+Natural language interface over the FinTech Intelligence Terminal knowledge graph.
 Uses Claude to translate user questions into Cypher queries and synthesize answers.
 """
 
@@ -44,8 +44,10 @@ class ChatResponse(BaseModel):
 
 # ── System Prompt ─────────────────────────────────────────────────────────────
 
-SYSTEM_PROMPT = """You are an expert AI analyst for the FinTech OSINT Intelligence Platform,
-a Bloomberg Terminal for open-source financial technology innovation.
+SYSTEM_PROMPT = """You are the AI analyst powering the FinTech Intelligence Terminal —
+the Bloomberg Terminal for open-source financial technology innovation, built by Nithesh Gudipuri.
+You track 47,000+ FinTech repositories across 14 autonomous AI agents, and publish the monthly
+GitKT FinTech OSS Index — a citable benchmark of open-source financial innovation.
 
 You have access to a Neo4j knowledge graph containing:
 - Repository nodes (fintech repositories with innovation scores)

@@ -5,7 +5,7 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│                         FINTECH OSINT PLATFORM                                │
+│                         FINTECH INTELLIGENCE TERMINAL                                │
 │                "Bloomberg Terminal for Open-Source FinTech"                  │
 └──────────────────────────────────────────────────────────────────────────────┘
 

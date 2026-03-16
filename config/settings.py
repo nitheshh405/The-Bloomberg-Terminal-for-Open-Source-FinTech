@@ -1,5 +1,5 @@
 """
-Central configuration management for the FinTech OSINT Platform.
+Central configuration management for the FinTech Intelligence Terminal.
 All settings are loaded from environment variables with sensible defaults.
 """
 
@@ -70,7 +70,7 @@ class RegulatorySettings(BaseSettings):
 
 class Settings(BaseSettings):
     # App
-    app_name: str = "FinTech OSINT Platform"
+    app_name: str = "FinTech Intelligence Terminal"
     app_version: str = "1.0.0"
     debug: bool = Field(False, env="DEBUG")
     log_level: str = Field("INFO", env="LOG_LEVEL")

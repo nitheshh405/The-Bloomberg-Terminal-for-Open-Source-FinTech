@@ -160,7 +160,7 @@ class SECEdgarIngester:
                 }
                 resp = await client.get(
                     "https://efts.sec.gov/LATEST/search-index?q=%22fintech%22&dateRange=custom&startdt=2024-01-01&forms=34-12G",
-                    headers={"User-Agent": "FinTech OSINT Platform research@example.com"},
+                    headers={"User-Agent": "FinTech Intelligence Terminal research@example.com"},
                 )
                 # SEC EDGAR full-text search
                 logger.info("SEC EDGAR fetch completed: status %s", resp.status_code)

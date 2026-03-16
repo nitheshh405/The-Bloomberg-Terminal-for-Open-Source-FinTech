@@ -7,6 +7,24 @@
 [![Neo4j](https://img.shields.io/badge/Neo4j-5.x-blue.svg)](https://neo4j.com/)
 [![React](https://img.shields.io/badge/React-18+-blue.svg)](https://reactjs.org/)
 [![Built with Claude](https://img.shields.io/badge/built%20with-Claude%20AI-blueviolet)](https://claude.ai)
+[![Agents](https://img.shields.io/badge/AI%20agents-14%20active-brightgreen)](#)
+[![Tests](https://img.shields.io/badge/tests-266%20passing-brightgreen)](#)
+
+---
+
+## 📊 Live Platform Metrics
+> *Auto-updated every Sunday by [AutonomousDocsAgent](ai-agents/orchestration/autonomous_docs_agent.py)*
+
+| Metric | Value |
+|--------|-------|
+<!-- LIVE_METRICS_START -->
+| 🏦 Repositories Tracked | **–** |
+| 📈 Avg Innovation Score | **–** |
+| 🚀 Breakout Repos (live) | **–** |
+| 👥 Developer Network | **–** |
+| 🟡 Compliance Gap | **–** |
+| 🔄 Updated this week | **–** |
+<!-- LIVE_METRICS_END -->
 
 ---
 
@@ -139,7 +157,7 @@ GitKT/
 
 ```bash
 # 1. Clone
-git clone https://github.com/nitheshh405/GitKT.git
+git clone https://github.com/nitheshh405/The-Bloomberg-Terminal-for-Open-Source-FinTech.git
 cd GitKT
 
 # 2. Configure environment

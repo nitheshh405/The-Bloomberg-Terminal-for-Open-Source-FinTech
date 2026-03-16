@@ -30,7 +30,7 @@ export const ChatInterface: React.FC = () => {
       id: "welcome",
       role: "assistant",
       content:
-        "Hello! I'm your FinTech OSINT intelligence assistant. Ask me anything about the open-source fintech ecosystem — emerging technologies, compliance implications, disruption signals, or startup opportunities.",
+        "Hello! I'm your FinTech Intelligence Terminal assistant. Ask me anything about the open-source fintech ecosystem — emerging technologies, compliance implications, disruption signals, or startup opportunities.",
     },
   ]);
   const [input, setInput] = useState("");

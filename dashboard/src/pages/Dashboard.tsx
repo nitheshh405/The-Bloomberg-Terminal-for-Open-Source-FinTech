@@ -1,6 +1,6 @@
 /**
  * Main Dashboard Page
- * Overview of FinTech OSINT intelligence with key metrics,
+ * Overview of FinTech Intelligence Terminal intelligence with key metrics,
  * top repositories, and sector distribution.
  */
 
@@ -57,7 +57,7 @@ export default function Dashboard() {
             <BarChart2 className="h-7 w-7 text-blue-400" />
             <div>
               <h1 className="text-xl font-bold text-white">
-                FinTech OSINT Platform
+                FinTech Intelligence Terminal
               </h1>
               <p className="text-xs text-gray-400">
                 Bloomberg Terminal for Open-Source FinTech Innovation
