@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from config.settings import get_settings
-from api.routers import repositories, technologies, regulations, graph, intelligence, search, chat
+from api.routers import repositories, technologies, regulations, graph, intelligence, search, chat, hitl_review
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -56,6 +56,7 @@ app.include_router(graph.router, prefix="/api/v1/graph", tags=["Knowledge Graph"
 app.include_router(intelligence.router, prefix="/api/v1/intelligence", tags=["Intelligence"])
 app.include_router(search.router, prefix="/api/v1/search", tags=["Search"])
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["Conversational AI"])
+app.include_router(hitl_review.router, prefix="/api/v1/hitl", tags=["HITL Compliance Review"])
 
 
 @app.get("/api/v1/health", tags=["Health"])

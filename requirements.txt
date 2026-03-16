@@ -36,6 +36,19 @@ pyarrow==16.1.0
 # ── Scheduling / Pipeline ─────────────────────────────────────────────────────
 apscheduler==3.10.4
 
+# ── Enterprise Risk Fixes ─────────────────────────────────────────────────────
+# Fix 1 – Data Provenance (HITL + Citation schemas)
+# (pydantic already listed above — no extra deps needed)
+
+# Fix 2 – Ingestion Scalability (Celery + token pool)
+celery[redis]==5.4.0
+redis==5.0.4
+kombu==5.3.4
+
+# Fix 3 – Enterprise Auth (OIDC + RBAC)
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
 # ── Utilities ─────────────────────────────────────────────────────────────────
 python-dotenv==1.0.1
 rich==13.7.1
