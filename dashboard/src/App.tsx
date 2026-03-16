@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   BarChart2,
   Network,
@@ -9,9 +10,11 @@ import {
   Zap,
   Globe,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
+import { apiClient, type GraphStats, type Repository, type IntelligenceReport, type ChatMessage } from "./services/api";
 
-// ── Inline mock data (no API needed for preview) ─────────────────────────────
+// ── Fallback mock data (shown when API is unavailable) ────────────────────────
 
 const MOCK_STATS = {
   total_repos: 47832,
@@ -96,25 +99,107 @@ const NAV = [
 export default function App() {
   const [activeTab, setActiveTab] = useState("overview");
   const [chatInput, setChatInput] = useState("");
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [chatMessages, setChatMessages] = useState([
     {
-      role: "assistant",
+      role: "assistant" as const,
       text: "Hello! I'm your FinTech OSINT intelligence assistant. Ask me anything about the open-source fintech ecosystem — emerging technologies, compliance implications, disruption signals, or startup opportunities.",
     },
   ]);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // ── Live API queries ─────────────────────────────────────────────────────
+  const { data: statsData } = useQuery({
+    queryKey: ["graph-stats"],
+    queryFn: () => apiClient.graphStats(),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: reposData, isLoading: reposLoading } = useQuery({
+    queryKey: ["repositories"],
+    queryFn: () => apiClient.listRepositories({ page_size: 20, order_by: "innovation_score" }),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: techsData, isLoading: techsLoading } = useQuery({
+    queryKey: ["technologies"],
+    queryFn: () => apiClient.listTechnologies({ limit: 9 }),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: reportsData, isLoading: reportsLoading } = useQuery({
+    queryKey: ["reports"],
+    queryFn: () => apiClient.listReports(),
+    retry: false,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const { data: regulationsData } = useQuery({
+    queryKey: ["regulations"],
+    queryFn: () => apiClient.listRegulations(),
+    retry: false,
+    staleTime: 30 * 60 * 1000,
+  });
+
+  // Use live stats or fall back to mock
+  const stats: GraphStats = statsData ?? {
+    total_repos: MOCK_STATS.total_repos,
+    total_devs: MOCK_STATS.total_devs,
+    total_techs: MOCK_STATS.total_techs,
+    high_disruption_count: MOCK_STATS.high_disruption_count,
+    startup_signal_count: MOCK_STATS.startup_signal_count,
+    avg_innovation_score: MOCK_STATS.avg_innovation_score,
+  };
+
+  const repos: Repository[] = reposData?.items ?? (MOCK_REPOS.map((r) => ({
+    id: r.name,
+    full_name: r.name,
+    url: `https://github.com/${r.name}`,
+    stars: r.stars,
+    forks: 0,
+    primary_sector: r.sector,
+    fintech_domains: [],
+    innovation_score: r.score,
+    disruption_score: r.disruption,
+    startup_score: r.score - 12,
+    source: "github",
+  })));
+
+  // ── Chat with live API ────────────────────────────────────────────────────
+  const chatMutation = useMutation({
+    mutationFn: ({ message, history }: { message: string; history: ChatMessage[] }) =>
+      apiClient.chat(message, history),
+    onSuccess: (data) => {
+      setChatMessages((m) => [...m, { role: "assistant" as const, text: data.answer }]);
+      setChatHistory((h) => [...h, { role: "assistant", content: data.answer }]);
+    },
+    onError: () => {
+      setChatMessages((m) => [
+        ...m,
+        {
+          role: "assistant" as const,
+          text: "Unable to reach the AI backend. Start the FastAPI server on port 8000 to enable live knowledge graph queries.",
+        },
+      ]);
+    },
+  });
 
   const handleChat = () => {
-    if (!chatInput.trim()) return;
-    setChatMessages((m) => [
-      ...m,
-      { role: "user", text: chatInput },
-      {
-        role: "assistant",
-        text: `Analyzing the knowledge graph for: "${chatInput}"…\n\nBased on current data, here are the top findings related to your query. Connect the API backend (port 8000) to get live results from the Neo4j knowledge graph.`,
-      },
-    ]);
+    if (!chatInput.trim() || chatMutation.isPending) return;
+    const message = chatInput.trim();
+    const newHistory: ChatMessage[] = [...chatHistory, { role: "user", content: message }];
+    setChatMessages((m) => [...m, { role: "user" as const, text: message }]);
+    setChatHistory(newHistory);
     setChatInput("");
+    chatMutation.mutate({ message, history: newHistory });
   };
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
 
   return (
     <div className="flex h-screen bg-gray-950 text-gray-100 overflow-hidden">
@@ -171,12 +256,12 @@ export default function App() {
             {/* KPI Grid */}
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
               {[
-                { label: "Repositories", value: "47,832", sub: "↑ 1,243 this week", color: "blue" },
-                { label: "Developers", value: "183K", sub: "tracked", color: "orange" },
-                { label: "Technologies", value: "2,847", sub: "distinct", color: "purple" },
-                { label: "High Disruption", value: "312", sub: "score ≥ 70", color: "red" },
-                { label: "Startup Signals", value: "589", sub: "score ≥ 65", color: "green" },
-                { label: "Avg Innovation", value: "61.4", sub: "out of 100", color: "yellow" },
+                { label: "Repositories", value: stats.total_repos.toLocaleString(), sub: "monitored", color: "blue" },
+                { label: "Developers", value: stats.total_devs > 1000 ? `${(stats.total_devs / 1000).toFixed(0)}K` : stats.total_devs.toString(), sub: "tracked", color: "orange" },
+                { label: "Technologies", value: stats.total_techs.toLocaleString(), sub: "distinct", color: "purple" },
+                { label: "High Disruption", value: stats.high_disruption_count.toString(), sub: "score ≥ 70", color: "red" },
+                { label: "Startup Signals", value: stats.startup_signal_count.toString(), sub: "score ≥ 65", color: "green" },
+                { label: "Avg Innovation", value: (stats.avg_innovation_score ?? 0).toFixed(1), sub: "out of 100", color: "yellow" },
               ].map(({ label, value, sub, color }) => (
                 <div
                   key={label}
@@ -216,24 +301,24 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-800/50">
-                      {MOCK_REPOS.map((r) => (
-                        <tr key={r.name} className="hover:bg-gray-800/30 transition-colors">
+                      {repos.slice(0, 10).map((r) => (
+                        <tr key={r.id} className="hover:bg-gray-800/30 transition-colors">
                           <td className="py-2.5 pr-4">
-                            <span className="font-mono text-xs text-blue-300">{r.name}</span>
+                            <span className="font-mono text-xs text-blue-300">{r.full_name}</span>
                           </td>
                           <td className="py-2.5 pr-4">
                             <span className="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">
-                              {r.sector}
+                              {r.primary_sector ?? "—"}
                             </span>
                           </td>
                           <td className="py-2.5 text-right text-gray-300">
-                            {r.stars.toLocaleString()}
+                            {(r.stars ?? 0).toLocaleString()}
                           </td>
                           <td className="py-2.5 text-right">
-                            <ScoreBadge score={r.score} />
+                            <ScoreBadge score={r.innovation_score ?? 0} />
                           </td>
                           <td className="py-2.5 text-right">
-                            <ScoreBadge score={r.disruption} />
+                            <ScoreBadge score={r.disruption_score ?? 0} />
                           </td>
                         </tr>
                       ))}
@@ -295,7 +380,8 @@ export default function App() {
           <div className="p-6 space-y-4">
             <h1 className="text-xl font-bold text-white">Repository Intelligence</h1>
             <p className="text-sm text-gray-400">
-              All 47,832 fintech repositories ranked by innovation score.
+              {reposData ? `${reposData.total.toLocaleString()} fintech repositories` : "Fintech repositories"} ranked by innovation score.
+              {reposLoading && <Loader2 className="inline ml-2 h-3 w-3 animate-spin" />}
             </p>
             <div className="rounded-xl border border-gray-800 bg-gray-900 p-5">
               <div className="flex gap-3 mb-4">
@@ -321,25 +407,26 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-800/50">
-                  {MOCK_REPOS.map((r, i) => (
-                    <tr key={r.name} className="hover:bg-gray-800/30 transition-colors cursor-pointer">
+                  {repos.map((r, i) => (
+                    <tr key={r.id} className="hover:bg-gray-800/30 transition-colors cursor-pointer">
                       <td className="py-2.5 pr-3 text-gray-600 text-xs">{i + 1}</td>
                       <td className="py-2.5 pr-4">
-                        <span className="font-mono text-xs text-blue-300 hover:text-blue-200">
-                          {r.name}
-                        </span>
+                        <a href={r.url} target="_blank" rel="noopener noreferrer"
+                           className="font-mono text-xs text-blue-300 hover:text-blue-200">
+                          {r.full_name}
+                        </a>
                       </td>
                       <td className="py-2.5 pr-4">
                         <span className="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-300">
-                          {r.sector}
+                          {r.primary_sector ?? "—"}
                         </span>
                       </td>
                       <td className="py-2.5 text-right text-gray-300 text-xs">
-                        {r.stars.toLocaleString()}
+                        {(r.stars ?? 0).toLocaleString()}
                       </td>
-                      <td className="py-2.5 text-right"><ScoreBadge score={r.score} /></td>
-                      <td className="py-2.5 text-right"><ScoreBadge score={r.disruption} /></td>
-                      <td className="py-2.5 text-right"><ScoreBadge score={r.score - 12} /></td>
+                      <td className="py-2.5 text-right"><ScoreBadge score={r.innovation_score ?? 0} /></td>
+                      <td className="py-2.5 text-right"><ScoreBadge score={r.disruption_score ?? 0} /></td>
+                      <td className="py-2.5 text-right"><ScoreBadge score={r.startup_score ?? 0} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -421,30 +508,32 @@ export default function App() {
           <div className="p-6 space-y-4">
             <h1 className="text-xl font-bold text-white">Weekly Intelligence Reports</h1>
             <p className="text-sm text-gray-400">Auto-generated every Monday at 06:00 UTC and committed to Git.</p>
+            {reportsLoading && (
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Loader2 className="h-4 w-4 animate-spin" /> Loading reports…
+              </div>
+            )}
             <div className="space-y-3">
-              {[
-                { date: "2026-03-10", repos: 1243, highlights: ["ISO 20022 surge +340%", "CBDC reference implementations", "AI AML tools critical mass"] },
-                { date: "2026-03-03", repos: 1108, highlights: ["ZK-proof privacy boom", "FedNow adoption wave", "Open Banking CFPB alignment"] },
-                { date: "2026-02-24", repos: 987, highlights: ["RegTech automation +22%", "DeFi institutional pivot", "Embedded finance expansion"] },
-              ].map((r) => (
+              {(reportsData && reportsData.length > 0 ? reportsData : [
+                { filename: "2026-03-10-weekly-intelligence.md", date: "2026-03-10", size_bytes: 7534 },
+                { filename: "2026-03-03-weekly-intelligence.md", date: "2026-03-03", size_bytes: 6821 },
+              ] as IntelligenceReport[]).map((r) => (
                 <div key={r.date} className="rounded-xl border border-gray-800 bg-gray-900 p-5">
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <h3 className="text-sm font-semibold text-white">
                         Weekly Intelligence — {r.date}
                       </h3>
-                      <p className="text-xs text-gray-500 mt-0.5">{r.repos} new repositories ingested</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {(r.size_bytes / 1024).toFixed(1)} KB report
+                      </p>
                     </div>
-                    <button className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300">
+                    <button
+                      onClick={() => window.open(`/api/v1/intelligence/reports/${r.date}`, "_blank")}
+                      className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
+                    >
                       View Report <ChevronRight className="h-3 w-3" />
                     </button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {r.highlights.map((h) => (
-                      <span key={h} className="rounded-full bg-gray-800 px-2.5 py-1 text-xs text-gray-300">
-                        {h}
-                      </span>
-                    ))}
                   </div>
                 </div>
               ))}
@@ -521,6 +610,15 @@ export default function App() {
                     </div>
                   </div>
                 ))}
+                {chatMutation.isPending && (
+                  <div className="flex gap-3">
+                    <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0 text-xs font-bold">AI</div>
+                    <div className="rounded-2xl bg-gray-800 px-4 py-3 flex items-center gap-2 text-sm text-gray-400">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Querying knowledge graph…
+                    </div>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
               </div>
 
               {/* Example prompts */}
@@ -547,16 +645,16 @@ export default function App() {
                   type="text"
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleChat()}
+                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleChat()}
                   placeholder="Ask about fintech technologies, regulations, or disruption signals…"
                   className="flex-1 rounded-xl bg-gray-800 border border-gray-700 px-4 py-2.5 text-sm text-gray-100 placeholder-gray-500 focus:border-blue-500 focus:outline-none"
                 />
                 <button
                   onClick={handleChat}
-                  disabled={!chatInput.trim()}
-                  className="h-10 px-4 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  disabled={!chatInput.trim() || chatMutation.isPending}
+                  className="h-10 px-4 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
                 >
-                  Send
+                  {chatMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
                 </button>
               </div>
             </div>
