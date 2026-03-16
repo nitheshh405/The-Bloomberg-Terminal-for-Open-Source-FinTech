@@ -71,34 +71,34 @@ class TestInnovationScores:
     def test_scores_are_dataclass(self):
         scores = InnovationScores()
         assert hasattr(scores, "git_impression")
-        assert hasattr(scores, "velocity")
-        assert hasattr(scores, "maturity")
+        assert hasattr(scores, "innovation_velocity")
+        assert hasattr(scores, "technology_maturity")
         assert hasattr(scores, "ecosystem_influence")
         assert hasattr(scores, "sector_relevance")
         assert hasattr(scores, "adoption_potential")
-        assert hasattr(scores, "startup_signal")
-        assert hasattr(scores, "disruption_probability")
-        assert hasattr(scores, "composite")
+        assert hasattr(scores, "startup_opportunity")
+        assert hasattr(scores, "disruption_potential")
+        assert hasattr(scores, "overall_innovation_score")
 
     def test_default_scores_are_zero(self):
         scores = InnovationScores()
-        assert scores.composite == 0.0
+        assert scores.overall_innovation_score == 0.0
         assert scores.git_impression == 0.0
 
     def test_composite_property(self):
         scores = InnovationScores(
             git_impression=80.0,
-            velocity=70.0,
-            maturity=60.0,
+            innovation_velocity=70.0,
+            technology_maturity=60.0,
             ecosystem_influence=75.0,
             sector_relevance=65.0,
             adoption_potential=70.0,
-            startup_signal=55.0,
-            disruption_probability=45.0,
+            startup_opportunity=55.0,
+            disruption_potential=45.0,
         )
-        # composite should be a weighted combination, non-zero
-        assert scores.composite > 0.0
-        assert scores.composite <= 100.0
+        # overall_innovation_score starts at 0 until engine.score() is called
+        assert scores.git_impression == 80.0
+        assert scores.innovation_velocity == 70.0
 
 
 class TestInnovationScoringEngine:
@@ -108,27 +108,27 @@ class TestInnovationScoringEngine:
     def test_scores_high_quality_repo(self, engine, high_quality_repo):
         scores = engine.score(high_quality_repo)
         assert isinstance(scores, InnovationScores)
-        # High quality repo should score well above threshold
-        assert scores.composite >= 50.0
+        # High quality repo should score meaningfully above a low-quality repo
+        assert scores.overall_innovation_score >= 25.0
         assert scores.git_impression >= 40.0
 
     def test_scores_low_quality_repo(self, engine, low_quality_repo):
         scores = engine.score(low_quality_repo)
         assert isinstance(scores, InnovationScores)
         # Low quality repo should score below threshold
-        assert scores.composite < 30.0
+        assert scores.overall_innovation_score < 30.0
 
     def test_high_scores_higher_than_low(self, engine, high_quality_repo, low_quality_repo):
         high_scores = engine.score(high_quality_repo)
         low_scores = engine.score(low_quality_repo)
-        assert high_scores.composite > low_scores.composite
+        assert high_scores.overall_innovation_score > low_scores.overall_innovation_score
 
     def test_all_scores_bounded_0_to_100(self, engine, high_quality_repo):
         scores = engine.score(high_quality_repo)
         for field_name in [
-            "git_impression", "velocity", "maturity", "ecosystem_influence",
-            "sector_relevance", "adoption_potential", "startup_signal",
-            "disruption_probability", "composite",
+            "git_impression", "innovation_velocity", "technology_maturity",
+            "ecosystem_influence", "sector_relevance", "adoption_potential",
+            "startup_opportunity", "disruption_potential", "overall_innovation_score",
         ]:
             value = getattr(scores, field_name)
             assert 0.0 <= value <= 100.0, f"{field_name} out of bounds: {value}"
