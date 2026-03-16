@@ -1,0 +1,242 @@
+name: Weekly FinTech Intelligence Pipeline
+
+on:
+  # Run every Monday at 06:00 UTC
+  schedule:
+    - cron: "0 6 * * 1"
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (skip DB writes and git commit)"
+        required: false
+        default: "false"
+        type: boolean
+      force_rescan:
+        description: "Force full repository rescan"
+        required: false
+        default: "false"
+        type: boolean
+
+permissions:
+  contents: write       # for committing intelligence reports
+  pull-requests: write  # for creating summary PRs
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # ── Job 1: Repository Discovery & Ingestion ──────────────────────────────
+  discovery:
+    name: Repository Discovery
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      repos_found: ${{ steps.discovery.outputs.repos_found }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Repository Discovery Agent
+        id: discovery
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN_SCAN }}
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+          NEO4J_URI: ${{ secrets.NEO4J_URI }}
+          NEO4J_USERNAME: ${{ secrets.NEO4J_USERNAME }}
+          NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          FORCE_RESCAN: ${{ inputs.force_rescan }}
+        run: |
+          python -m automation.scripts.run_agent \
+            --agent discovery \
+            --output-json /tmp/discovery_result.json
+
+          repos=$(python -c "import json; d=json.load(open('/tmp/discovery_result.json')); print(d.get('items_processed', 0))")
+          echo "repos_found=$repos" >> $GITHUB_OUTPUT
+
+      - name: Upload discovery results
+        uses: actions/upload-artifact@v4
+        with:
+          name: discovery-results
+          path: /tmp/discovery_result.json
+          retention-days: 7
+
+  # ── Job 2: Classification & Scoring ──────────────────────────────────────
+  classify_and_score:
+    name: Classification & Innovation Scoring
+    runs-on: ubuntu-latest
+    needs: discovery
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      - name: Run Technology Classification Agent
+        env:
+          NEO4J_URI: ${{ secrets.NEO4J_URI }}
+          NEO4J_USERNAME: ${{ secrets.NEO4J_USERNAME }}
+          NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python -m automation.scripts.run_agent --agent classification
+
+      - name: Run Innovation Scoring Pipeline
+        env:
+          NEO4J_URI: ${{ secrets.NEO4J_URI }}
+          NEO4J_USERNAME: ${{ secrets.NEO4J_USERNAME }}
+          NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+        run: python -m automation.scripts.run_scoring_pipeline
+
+  # ── Job 3: Compliance & Regulatory Analysis ───────────────────────────────
+  compliance:
+    name: Compliance & Regulatory Analysis
+    runs-on: ubuntu-latest
+    needs: classify_and_score
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      - name: Fetch Regulatory Feeds
+        env:
+          NEO4J_URI: ${{ secrets.NEO4J_URI }}
+          NEO4J_USERNAME: ${{ secrets.NEO4J_USERNAME }}
+          NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+        run: python -m automation.scripts.run_regulatory_feeds
+
+      - name: Run Regulatory Analysis Agent
+        env:
+          NEO4J_URI: ${{ secrets.NEO4J_URI }}
+          NEO4J_USERNAME: ${{ secrets.NEO4J_USERNAME }}
+          NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python -m automation.scripts.run_agent --agent compliance
+
+  # ── Job 4: Disruption & Startup Prediction ────────────────────────────────
+  prediction:
+    name: Disruption & Startup Prediction
+    runs-on: ubuntu-latest
+    needs: compliance
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      - name: Run Disruption Prediction Agent
+        env:
+          NEO4J_URI: ${{ secrets.NEO4J_URI }}
+          NEO4J_USERNAME: ${{ secrets.NEO4J_USERNAME }}
+          NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+        run: python -m automation.scripts.run_agent --agent prediction
+
+  # ── Job 5: Generate & Commit Weekly Intelligence Report ───────────────────
+  generate_report:
+    name: Generate Weekly Intelligence Report
+    runs-on: ubuntu-latest
+    needs: prediction
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      - name: Run Weekly Intelligence Agent
+        id: report
+        env:
+          NEO4J_URI: ${{ secrets.NEO4J_URI }}
+          NEO4J_USERNAME: ${{ secrets.NEO4J_USERNAME }}
+          NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python -m automation.scripts.run_agent \
+            --agent weekly_intelligence \
+            --output-json /tmp/report_result.json
+
+          report_path=$(python -c "import json; d=json.load(open('/tmp/report_result.json')); print(d.get('metadata',{}).get('report_path',''))")
+          echo "report_path=$report_path" >> $GITHUB_OUTPUT
+
+      - name: Configure Git
+        run: |
+          git config user.name "FinTech OSINT Bot"
+          git config user.email "fintech-osint-bot@github-actions"
+
+      - name: Commit intelligence report
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          git add automation/reports/
+          git diff --staged --quiet || \
+            git commit -m "Weekly FinTech Intelligence Update — $DATE
+
+          Auto-generated by the FinTech OSINT Platform weekly pipeline.
+
+          - Repository discovery and metadata refresh
+          - Innovation score recalculation
+          - Compliance mapping update
+          - Disruption prediction refresh
+          - Startup opportunity signal detection
+
+          [skip ci]"
+          git push
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-intelligence-report
+          path: automation/reports/
+          retention-days: 90
+
+  # ── Job 6: Pipeline Summary ───────────────────────────────────────────────
+  summary:
+    name: Pipeline Summary
+    runs-on: ubuntu-latest
+    needs: generate_report
+    if: always()
+
+    steps:
+      - name: Summarize pipeline results
+        run: |
+          echo "## Weekly FinTech OSINT Pipeline Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Stage | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Repository Discovery | ${{ needs.discovery.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Classification & Scoring | ${{ needs.classify_and_score.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Compliance Analysis | ${{ needs.compliance.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Disruption Prediction | ${{ needs.prediction.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Weekly Report | ${{ needs.generate_report.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Repositories discovered: **${{ needs.discovery.outputs.repos_found }}**" >> $GITHUB_STEP_SUMMARY

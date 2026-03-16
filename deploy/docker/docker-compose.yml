@@ -1,0 +1,136 @@
+version: "3.9"
+
+# FinTech OSINT Platform — Full Stack Docker Compose
+# For local development and self-hosted deployment.
+#
+# Quick start:
+#   cp config/env.example .env
+#   docker-compose -f deploy/docker/docker-compose.yml up -d
+
+services:
+
+  # ── Infrastructure ─────────────────────────────────────────────────────────
+
+  neo4j:
+    image: neo4j:5.18-community
+    container_name: fintech-neo4j
+    restart: unless-stopped
+    ports:
+      - "7474:7474"   # HTTP browser
+      - "7687:7687"   # Bolt
+    environment:
+      NEO4J_AUTH: "${NEO4J_USERNAME:-neo4j}/${NEO4J_PASSWORD:-fintechintel}"
+      NEO4J_PLUGINS: '["apoc", "graph-data-science"]'
+      NEO4J_dbms_memory_heap_initial__size: "512m"
+      NEO4J_dbms_memory_heap_max__size: "2g"
+      NEO4J_dbms_memory_pagecache_size: "1g"
+      NEO4J_dbms_databases_default__to__read__only: "false"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/var/lib/neo4j/import
+    healthcheck:
+      test: ["CMD", "neo4j", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: fintech-elasticsearch
+    restart: unless-stopped
+    ports:
+      - "9200:9200"
+    environment:
+      discovery.type: single-node
+      ES_JAVA_OPTS: "-Xms512m -Xmx1g"
+      xpack.security.enabled: "false"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: fintech-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # ── Application Services ───────────────────────────────────────────────────
+
+  api:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.api
+    container_name: fintech-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../../.env
+    environment:
+      NEO4J_URI: "bolt://neo4j:7687"
+      ES_HOSTS: '["http://elasticsearch:9200"]'
+    depends_on:
+      neo4j:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    volumes:
+      - ../../automation/reports:/app/automation/reports
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  dashboard:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.dashboard
+    container_name: fintech-dashboard
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    environment:
+      VITE_API_URL: "http://localhost:8000"
+    depends_on:
+      - api
+
+  # ── Pipeline Scheduler ─────────────────────────────────────────────────────
+
+  scheduler:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.api
+    container_name: fintech-scheduler
+    restart: unless-stopped
+    command: python -m automation.scripts.scheduler
+    env_file:
+      - ../../.env
+    environment:
+      NEO4J_URI: "bolt://neo4j:7687"
+      ES_HOSTS: '["http://elasticsearch:9200"]'
+    depends_on:
+      - api
+      - neo4j
+      - elasticsearch
+    volumes:
+      - ../../automation/reports:/app/automation/reports
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  neo4j_import:
+  es_data:
+  redis_data:
+
+networks:
+  default:
+    name: fintech-osint

@@ -1,0 +1,186 @@
+---
+# FinTech OSINT Platform — Kubernetes Deployment
+# Apply with: kubectl apply -f deploy/kubernetes/
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fintech-api
+  namespace: fintech-osint
+  labels:
+    app: fintech-api
+    component: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: fintech-api
+  template:
+    metadata:
+      labels:
+        app: fintech-api
+    spec:
+      containers:
+        - name: api
+          image: fintech-osint/api:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: NEO4J_URI
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: neo4j-uri
+            - name: NEO4J_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: neo4j-username
+            - name: NEO4J_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: neo4j-password
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: anthropic-api-key
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: github-token
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fintech-api
+  namespace: fintech-osint
+spec:
+  selector:
+    app: fintech-api
+  ports:
+    - port: 80
+      targetPort: 8000
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fintech-dashboard
+  namespace: fintech-osint
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fintech-dashboard
+  template:
+    metadata:
+      labels:
+        app: fintech-dashboard
+    spec:
+      containers:
+        - name: dashboard
+          image: fintech-osint/dashboard:latest
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fintech-dashboard
+  namespace: fintech-osint
+spec:
+  selector:
+    app: fintech-dashboard
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fintech-osint-ingress
+  namespace: fintech-osint
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+    - hosts:
+        - fintech-osint.yourdomain.com
+      secretName: fintech-tls
+  rules:
+    - host: fintech-osint.yourdomain.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: fintech-api
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: fintech-dashboard
+                port:
+                  number: 80
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: fintech-weekly-pipeline
+  namespace: fintech-osint
+spec:
+  schedule: "0 6 * * 1"   # Monday 06:00 UTC
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: pipeline
+              image: fintech-osint/api:latest
+              command: ["python", "-m", "automation.scripts.run_pipeline"]
+              envFrom:
+                - secretRef:
+                    name: fintech-secrets
+              resources:
+                requests:
+                  cpu: "1000m"
+                  memory: "2Gi"
+                limits:
+                  cpu: "4000m"
+                  memory: "8Gi"
