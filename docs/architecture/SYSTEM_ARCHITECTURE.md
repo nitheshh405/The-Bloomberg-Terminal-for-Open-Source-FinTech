@@ -298,3 +298,161 @@ Internet ──► Ingress│  NGINX Ingress  │
 | Pipeline Trigger | GitHub Actions | Zero infrastructure, auto-runs on schedule |
 | Frontend | React + D3.js | Maximum flexibility for custom graph visualizations |
 | API Framework | FastAPI | Async, auto-docs, Pydantic validation |
+| Task Queue | Celery + Redis | Distributed ingestion, automatic rate-limit retry |
+| Auth | OIDC + JWT (python-jose) | Enterprise SSO (Azure AD / Okta) without custom auth |
+
+---
+
+## 11. Enterprise Risk Mitigations (Production-Grade)
+
+### 11.1 Data Provenance — Eliminating AI Hallucinations
+
+**Problem:** AI compliance claims without citations can mislead compliance officers and expose institutions to regulatory liability.
+
+**Architecture:**
+
+```
+Claude (tool_use) ─────► ComplianceClaim (Pydantic strict schema)
+                                │
+                    ┌───────────▼────────────┐
+                    │  CodeCitation (required) │
+                    │  • file_path             │
+                    │  • line_start / line_end │
+                    │  • exact_quote (≥10 ch.) │  ← verbatim, no paraphrasing
+                    │  • evidence_url          │  ← GitHub permalink
+                    │  • confidence_score      │  ← 0.0 – 1.0
+                    └───────────┬─────────────┘
+                                │
+              confidence ≥ 0.8 ?
+              ┌─────────────────┴──────────────────┐
+             YES                                    NO
+              │                                     │
+    hitl_status = "auto"              hitl_status = "pending"
+    → Neo4j COMPLIES_WITH             → HITL queue (compliance officer review)
+      verified = true                   GET /api/v1/hitl/pending
+                                        POST /{repo_id}/approve | /reject
+```
+
+**Key files:**
+- `api/schemas/compliance_citation.py` — Pydantic models + Claude tool schema
+- `knowledge-graph/hitl/hitl_queue.py` — Neo4j HITL queue manager
+- `api/routers/hitl_review.py` — REST endpoints for dashboard review panel
+
+**Neo4j relationship:**
+```cypher
+(Repository)-[:COMPLIES_WITH {
+    confidence:   0.72,
+    hitl_status:  "pending",
+    exact_quote:  "aml_check(transaction)",
+    evidence_url: "https://github.com/org/repo/blob/SHA/file#L42",
+    reviewed_by:  null
+}]->(RegulatoryFramework)
+```
+
+---
+
+### 11.2 Ingestion Scalability — GitHub Rate Limit Architecture
+
+**Problem:** GitHub REST API: 5,000 req/hr/token. Scanning 50k repos exhausts this in minutes.
+
+**Solution stack:**
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  GitHubTokenPool  (data-ingestion/github/token_pool.py)  │
+│  • Holds N PATs (GITHUB_TOKEN, GITHUB_TOKEN_1…9)         │
+│  • Round-robin rotation per request                       │
+│  • Auto-sleep until X-RateLimit-Reset on exhaustion       │
+│  • Effective limit: N × 5,000 req/hr                      │
+└────────────────────────┬─────────────────────────────────┘
+                         │ provides headers to
+┌────────────────────────▼─────────────────────────────────┐
+│  GitHubGraphQLClient  (data-ingestion/github/graphql_client.py) │
+│  • 1 GraphQL request = metadata + commits + contributors  │
+│    + releases + directory listing  (was 6 REST calls)     │
+│  • Concurrency: asyncio.Semaphore(10) — polite batching   │
+└────────────────────────┬─────────────────────────────────┘
+                         │ results queued via
+┌────────────────────────▼─────────────────────────────────┐
+│  Celery Tasks  (data-ingestion/queue/)                    │
+│  • celery_app.py  — broker=Redis, beat schedule           │
+│  • ingestion_tasks.py:                                    │
+│    - ingest_repo(owner, name)   → GraphQL → Neo4j         │
+│    - run_full_ingestion_sweep() → Monday 02:00 UTC        │
+│    - refresh_active_repos()     → every 6 hours           │
+│    - rescan_rejected_repos()    → after HITL reject        │
+│  • Rate-limit retry: self.retry(countdown=reset_time)     │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Start workers:**
+```bash
+docker run -p 6379:6379 redis:7-alpine
+celery -A data_ingestion.queue.celery_app worker --concurrency=4
+celery -A data_ingestion.queue.celery_app beat
+```
+
+---
+
+### 11.3 Enterprise Integration — OIDC / RBAC
+
+**Problem:** Financial institutions require SSO via Azure AD / Okta / Ping. Username/password systems are blocked by IT security policy.
+
+**OIDC Flow:**
+
+```
+Browser                 Azure AD / Okta              FastAPI
+   │                         │                          │
+   │── login redirect ───────►│                          │
+   │◄── access_token JWT ─────│                          │
+   │                         │                          │
+   │── GET /api/v1/hitl/pending ─────────────────────────►│
+   │   Authorization: Bearer <JWT>                        │
+   │                                                      │
+   │                              ┌─── get_current_user() │
+   │                              │    fetch JWKS (cached)│
+   │                              │    verify RS256 sig   │
+   │                              │    decode claims      │
+   │                              └──► AuthenticatedUser  │
+   │                                   .sub / .email      │
+   │                                   .roles: ["compliance_officer"]
+   │                                         │
+   │                              require_role("compliance_officer")
+   │                              _effective_level ≥ 2 ? → 200 OK
+   │◄── 200 pending queue ─────────────────────────────────│
+```
+
+**Role mapping (Azure AD App Roles):**
+
+| Azure AD App Role | GitKT Role | Permissions |
+|---|---|---|
+| `GitKT.Admin` | `admin` | Full access |
+| `GitKT.ComplianceOfficer` | `compliance_officer` | HITL approve/reject + all reads |
+| `GitKT.Analyst` | `analyst` | Read-only (repos, scores, reports) |
+| `GitKT.Developer` | `developer` | API pipeline access |
+
+**Key files:**
+- `api/auth/oidc.py` — JWKS discovery, JWT validation, `get_current_user()`
+- `api/auth/rbac.py` — `require_role(min_role)` dependency factory + audit log
+
+**Environment variables:**
+```bash
+AUTH_ENABLED=true
+OIDC_ISSUER_URL=https://login.microsoftonline.com/{tenant}/v2.0
+OIDC_AUDIENCE=api://gitkt-platform
+```
+
+---
+
+## 12. Test Coverage Map
+
+| File | Tests | Covers |
+|---|---|---|
+| `test_innovation_scoring.py` | 14 | InnovationScores dataclass, ScoringEngine |
+| `test_compliance_frameworks.py` | 21 | 9 frameworks, domain/jurisdiction lookups |
+| `test_dependency_analysis.py` | 20 | Manifest parsers, supply-chain risk |
+| `test_innovation_signal.py` | 20 | ISS velocity, pre-viral, cross-pollination |
+| `test_adoption_opportunity.py` | 24 | 6-dimension readiness, sector affinity |
+| `test_enterprise_risks.py` | 37 | Citation schema, token pool, RBAC levels |
+| `test_api_health.py` | 17 | FastAPI routing, CORS, search validation |
+| **Total** | **153** | |
