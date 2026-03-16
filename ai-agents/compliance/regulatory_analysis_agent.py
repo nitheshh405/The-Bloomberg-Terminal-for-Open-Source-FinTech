@@ -10,6 +10,7 @@ Evaluates each repository's regulatory and compliance implications:
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
@@ -68,6 +69,8 @@ REGULATION_TECH_REQUIREMENTS: Dict[str, List[str]] = {
 }
 
 # ── Scoring weights ───────────────────────────────────────────────────────────
+
+MIN_REGULATION_SIGNAL_HITS = 2
 
 COMPLIANCE_SCORE_WEIGHTS = {
     "data_privacy": 0.20,
@@ -147,6 +150,10 @@ class RegulatoryAnalysisAgent(BaseAgent):
         scores = self._compute_compliance_scores(full_text)
         matched_regs = self._match_regulations(full_text)
         capabilities = self._detect_compliance_capabilities(full_text)
+        evidence_by_reg = {
+            reg_id: self._build_regulation_provenance(reg_id, full_text)
+            for reg_id in matched_regs
+        }
 
         from datetime import datetime, timezone
         now = datetime.now(timezone.utc).isoformat()
@@ -158,6 +165,8 @@ class RegulatoryAnalysisAgent(BaseAgent):
                 r.auditability_score        = $audit,
                 r.data_governance_score     = $data_gov,
                 r.compliance_capabilities   = $capabilities,
+                r.regulatory_mapping_method = "rule_based_v1",
+                r.regulatory_mapping_review_status = "auto_generated",
                 r.last_compliance_scored_at = datetime($now)
         """, {
             "id": repo["id"],
@@ -172,16 +181,27 @@ class RegulatoryAnalysisAgent(BaseAgent):
         # Link to matched regulations
         for reg_id in matched_regs:
             risk_level = self._assess_regulation_risk(reg_id, full_text)
+            evidence = evidence_by_reg[reg_id]
             await self._neo4j_write("""
                 MATCH (r:Repository {id: $repo_id})
                 MATCH (rl:Regulation {id: $reg_id})
                 MERGE (r)-[rel:SUBJECT_TO]->(rl)
                 SET rel.risk_level = $risk_level,
+                    rel.provenance_method = $provenance_method,
+                    rel.provenance_signal_count = $signal_count,
+                    rel.provenance_signals = $signals,
+                    rel.provenance_hash = $provenance_hash,
+                    rel.confidence = $confidence,
                     rel.updated_at = datetime($now)
             """, {
                 "repo_id": repo["id"],
                 "reg_id": reg_id,
                 "risk_level": risk_level,
+                "provenance_method": evidence["method"],
+                "signal_count": evidence["signal_count"],
+                "signals": evidence["signals"],
+                "provenance_hash": evidence["hash"],
+                "confidence": evidence["confidence"],
                 "now": now,
             })
 
@@ -192,11 +212,21 @@ class RegulatoryAnalysisAgent(BaseAgent):
                     MATCH (rl:Regulation {id: $reg_id})
                     MERGE (r)-[rel:SUPPORTS_COMPLIANCE]->(rl)
                     SET rel.capabilities = $capabilities,
+                        rel.provenance_method = $provenance_method,
+                        rel.provenance_signal_count = $signal_count,
+                        rel.provenance_signals = $signals,
+                        rel.provenance_hash = $provenance_hash,
+                        rel.confidence = $confidence,
                         rel.updated_at = datetime($now)
                 """, {
                     "repo_id": repo["id"],
                     "reg_id": reg_id,
                     "capabilities": capabilities,
+                    "provenance_method": evidence["method"],
+                    "signal_count": evidence["signal_count"],
+                    "signals": evidence["signals"],
+                    "provenance_hash": evidence["hash"],
+                    "confidence": evidence["confidence"],
                     "now": now,
                 })
 
@@ -240,7 +270,7 @@ class RegulatoryAnalysisAgent(BaseAgent):
         matched = []
         for reg_id, signals in REGULATION_TECH_REQUIREMENTS.items():
             hits = sum(1 for s in signals if s.lower() in text)
-            if hits >= 2:
+            if hits >= MIN_REGULATION_SIGNAL_HITS:
                 matched.append(reg_id)
         return matched
 
@@ -256,9 +286,27 @@ class RegulatoryAnalysisAgent(BaseAgent):
         }
         for cap, signals in signal_map.items():
             hits = sum(1 for s in signals if s.lower() in text)
-            if hits >= 2:
+            if hits >= MIN_REGULATION_SIGNAL_HITS:
                 capabilities.append(cap)
         return capabilities
+
+    def _build_regulation_provenance(self, reg_id: str, text: str) -> Dict[str, object]:
+        signals = REGULATION_TECH_REQUIREMENTS.get(reg_id, [])
+        matched_signals = [s for s in signals if s.lower() in text]
+        signal_count = len(matched_signals)
+        coverage = signal_count / max(len(signals), 1)
+        digest = hashlib.sha256("|".join(sorted(matched_signals)).encode("utf-8")).hexdigest()[:16]
+
+        # Deterministic confidence for governance/review workflows.
+        confidence = min(1.0, round(0.35 + coverage, 2))
+
+        return {
+            "method": "rule_based_v1",
+            "signals": matched_signals,
+            "signal_count": signal_count,
+            "hash": digest,
+            "confidence": confidence,
+        }
 
     def _assess_regulation_risk(self, reg_id: str, text: str) -> str:
         signals = REGULATION_TECH_REQUIREMENTS.get(reg_id, [])

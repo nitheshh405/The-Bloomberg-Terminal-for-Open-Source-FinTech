@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -155,8 +156,8 @@ class GitHubScanner:
                 "page": page,
             }
             try:
-                resp = await self._client.get(url, params=params)
-                self._handle_rate_limit(resp)
+                resp = await self._request_with_backoff(url, params=params)
+                await self._handle_rate_limit(resp)
                 resp.raise_for_status()
                 data = resp.json()
             except httpx.HTTPStatusError as exc:
@@ -187,13 +188,47 @@ class GitHubScanner:
 
     # ── Rate limit handler ────────────────────────────────────────────────────
 
-    def _handle_rate_limit(self, response: httpx.Response) -> None:
+    async def _handle_rate_limit(self, response: httpx.Response) -> None:
         remaining = int(response.headers.get("x-ratelimit-remaining", 10))
         if remaining < 5:
             reset_ts = int(response.headers.get("x-ratelimit-reset", time.time() + 60))
             wait = max(0, reset_ts - int(time.time())) + 2
             logger.warning("GitHub rate limit approaching — sleeping %ds", wait)
-            time.sleep(wait)
+            await asyncio.sleep(wait)
+
+    async def _request_with_backoff(self, url: str, params: Optional[Dict] = None, headers: Optional[Dict] = None) -> httpx.Response:
+        """Request helper with adaptive backoff for global-scale ingestion workloads."""
+        max_attempts = 5
+        for attempt in range(1, max_attempts + 1):
+            resp = await self._client.get(url, params=params, headers=headers)
+            status = resp.status_code
+
+            # GitHub search at scale regularly hits 403/429 throttling windows
+            if status in (403, 429):
+                retry_after = resp.headers.get("retry-after")
+                if retry_after:
+                    wait = int(retry_after)
+                else:
+                    reset_ts = int(resp.headers.get("x-ratelimit-reset", int(time.time()) + 60))
+                    wait = max(1, reset_ts - int(time.time()))
+
+                # Full-jitter exponential backoff to avoid synchronized retries
+                jitter = random.uniform(0, min(3, attempt))
+                sleep_for = min(120, wait + jitter + (2 ** (attempt - 1)))
+                logger.warning(
+                    "GitHub throttled (status=%s, attempt=%s/%s). Sleeping %.1fs",
+                    status,
+                    attempt,
+                    max_attempts,
+                    sleep_for,
+                )
+                await asyncio.sleep(sleep_for)
+                continue
+
+            return resp
+
+        # Return the last response to preserve caller error handling path
+        return resp
 
     # ── Parser ────────────────────────────────────────────────────────────────
 
@@ -231,8 +266,8 @@ class GitHubScanner:
         """Return list of contributor login names for a repository."""
         url = f"{self.BASE_URL}/repos/{full_name}/contributors"
         try:
-            resp = await self._client.get(url, params={"per_page": max_contributors})
-            self._handle_rate_limit(resp)
+            resp = await self._request_with_backoff(url, params={"per_page": max_contributors})
+            await self._handle_rate_limit(resp)
             resp.raise_for_status()
             return [c["login"] for c in resp.json() if isinstance(c, dict)]
         except Exception as exc:
@@ -243,8 +278,8 @@ class GitHubScanner:
         """Return first 2000 chars of the default README (decoded)."""
         url = f"{self.BASE_URL}/repos/{full_name}/readme"
         try:
-            resp = await self._client.get(url, headers={"Accept": "application/vnd.github.raw"})
-            self._handle_rate_limit(resp)
+            resp = await self._request_with_backoff(url, headers={"Accept": "application/vnd.github.raw"})
+            await self._handle_rate_limit(resp)
             resp.raise_for_status()
             return resp.text[:2000]
         except Exception:

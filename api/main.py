@@ -8,12 +8,13 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from config.settings import get_settings
 from api.routers import repositories, technologies, regulations, graph, intelligence, search, chat
+from api.security import require_read_access
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -32,7 +33,7 @@ app = FastAPI(
     description="Bloomberg Terminal for Open-Source FinTech Innovation",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json",
+    openapi_url="/openapi.json",
     lifespan=lifespan,
 )
 
@@ -49,13 +50,48 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 
-app.include_router(repositories.router, prefix="/api/v1/repositories", tags=["Repositories"])
-app.include_router(technologies.router, prefix="/api/v1/technologies", tags=["Technologies"])
-app.include_router(regulations.router, prefix="/api/v1/regulations", tags=["Regulations"])
-app.include_router(graph.router, prefix="/api/v1/graph", tags=["Knowledge Graph"])
-app.include_router(intelligence.router, prefix="/api/v1/intelligence", tags=["Intelligence"])
-app.include_router(search.router, prefix="/api/v1/search", tags=["Search"])
-app.include_router(chat.router, prefix="/api/v1/chat", tags=["Conversational AI"])
+app.include_router(
+    repositories.router,
+    prefix="/api/v1/repositories",
+    tags=["Repositories"],
+    dependencies=[Depends(require_read_access)],
+)
+app.include_router(
+    technologies.router,
+    prefix="/api/v1/technologies",
+    tags=["Technologies"],
+    dependencies=[Depends(require_read_access)],
+)
+app.include_router(
+    regulations.router,
+    prefix="/api/v1/regulations",
+    tags=["Regulations"],
+    dependencies=[Depends(require_read_access)],
+)
+app.include_router(
+    graph.router,
+    prefix="/api/v1/graph",
+    tags=["Knowledge Graph"],
+    dependencies=[Depends(require_read_access)],
+)
+app.include_router(
+    intelligence.router,
+    prefix="/api/v1/intelligence",
+    tags=["Intelligence"],
+    dependencies=[Depends(require_read_access)],
+)
+app.include_router(
+    search.router,
+    prefix="/api/v1/search",
+    tags=["Search"],
+    dependencies=[Depends(require_read_access)],
+)
+app.include_router(
+    chat.router,
+    prefix="/api/v1/chat",
+    tags=["Conversational AI"],
+    dependencies=[Depends(require_read_access)],
+)
 
 
 @app.get("/api/v1/health", tags=["Health"])

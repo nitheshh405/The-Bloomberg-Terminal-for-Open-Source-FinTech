@@ -68,6 +68,17 @@ class RegulatorySettings(BaseSettings):
     update_interval_hours: int = 6
 
 
+class AuthSettings(BaseSettings):
+    enabled: bool = Field(False, env="AUTH_ENABLED")
+    mode: str = Field("none", env="AUTH_MODE")  # none | oidc_introspection
+    oidc_introspection_url: str = Field("", env="OIDC_INTROSPECTION_URL")
+    oidc_client_id: str = Field("", env="OIDC_CLIENT_ID")
+    oidc_client_secret: str = Field("", env="OIDC_CLIENT_SECRET")
+    required_read_roles: List[str] = Field(default_factory=lambda: ["analyst", "viewer", "admin"])
+    required_write_roles: List[str] = Field(default_factory=lambda: ["analyst", "admin"])
+    required_admin_roles: List[str] = Field(default_factory=lambda: ["admin"])
+
+
 class Settings(BaseSettings):
     # App
     app_name: str = "FinTech OSINT Platform"
@@ -90,6 +101,7 @@ class Settings(BaseSettings):
     ml: MLSettings = MLSettings()
     anthropic: AnthropicSettings = AnthropicSettings()
     regulatory: RegulatorySettings = RegulatorySettings()
+    auth: AuthSettings = AuthSettings()
 
     # Pipeline
     weekly_run_day: str = "monday"

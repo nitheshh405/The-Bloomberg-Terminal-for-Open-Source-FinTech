@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
 from typing import AsyncIterator, Dict, List, Optional, Set
 
 import httpx
@@ -64,7 +65,7 @@ class GitLabScanner:
                 "min_access_level": 0,
             }
             try:
-                resp = await self._client.get(url, params=params)
+                resp = await self._request_with_backoff(url, params=params)
                 resp.raise_for_status()
                 projects = resp.json()
             except Exception as exc:
@@ -85,6 +86,28 @@ class GitLabScanner:
                 break
             page += 1
             await asyncio.sleep(0.5)
+
+
+    async def _request_with_backoff(self, url: str, params: Optional[Dict] = None) -> httpx.Response:
+        """GitLab request helper with adaptive backoff for API throttling windows."""
+        max_attempts = 5
+        for attempt in range(1, max_attempts + 1):
+            resp = await self._client.get(url, params=params)
+            if resp.status_code == 429:
+                retry_after = int(resp.headers.get("Retry-After", "1"))
+                jitter = random.uniform(0, min(2, attempt))
+                wait = min(120, retry_after + jitter + (2 ** (attempt - 1)))
+                logger.warning(
+                    "GitLab throttled (attempt=%s/%s). Sleeping %.1fs",
+                    attempt,
+                    max_attempts,
+                    wait,
+                )
+                await asyncio.sleep(wait)
+                continue
+            return resp
+
+        return resp
 
     def _parse(self, proj: Dict, discovery_topic: str) -> RepositoryRecord:
         from datetime import datetime
