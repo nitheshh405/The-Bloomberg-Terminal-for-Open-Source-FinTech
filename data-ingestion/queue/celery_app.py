@@ -36,7 +36,11 @@ app = Celery(
     "gitkt_ingestion",
     broker=BROKER_URL,
     backend=RESULT_URL,
-    include=["data_ingestion.queue.ingestion_tasks"],
+    include=[
+        "data_ingestion.queue.ingestion_tasks",   # GitHub repo ingestion
+        "data_ingestion.queue.agent_tasks",        # AI agent runs (scoring, signals, etc.)
+        "data_ingestion.queue.index_tasks",        # Monthly GitKT OSS Index
+    ],
 )
 
 app.conf.update(
@@ -61,6 +65,8 @@ app.conf.update(
 # ── Periodic schedule (Celery Beat) ───────────────────────────────────────────
 
 app.conf.beat_schedule = {
+
+    # ── DATA INGESTION (always on) ─────────────────────────────────────────────
     # Full ingestion sweep — Monday 02:00 UTC (off-peak)
     "weekly-full-ingestion": {
         "task":     "data_ingestion.queue.ingestion_tasks.run_full_ingestion_sweep",
@@ -75,5 +81,51 @@ app.conf.beat_schedule = {
     "compliance-rescan": {
         "task":     "data_ingestion.queue.ingestion_tasks.rescan_rejected_repos",
         "schedule": crontab(minute=30, hour="*/12"),
+    },
+
+    # ── AI AGENT INTELLIGENCE CYCLE (weekly, Tue–Sat cascading) ───────────────
+    # Tuesday 03:00 — Technology classification + regulatory analysis
+    "weekly-classification": {
+        "task":     "data_ingestion.queue.agent_tasks.run_classification_cycle",
+        "schedule": crontab(hour=3, minute=0, day_of_week="tuesday"),
+    },
+    # Wednesday 03:00 — Contributor network + adoption scoring
+    "weekly-network-adoption": {
+        "task":     "data_ingestion.queue.agent_tasks.run_network_adoption_cycle",
+        "schedule": crontab(hour=3, minute=0, day_of_week="wednesday"),
+    },
+    # Thursday 03:00 — Disruption prediction + dependency analysis
+    "weekly-disruption-dependency": {
+        "task":     "data_ingestion.queue.agent_tasks.run_disruption_dependency_cycle",
+        "schedule": crontab(hour=3, minute=0, day_of_week="thursday"),
+    },
+    # Friday 03:00 — Innovation signals + future trajectory + external correlator
+    "weekly-signals": {
+        "task":     "data_ingestion.queue.agent_tasks.run_signals_cycle",
+        "schedule": crontab(hour=3, minute=0, day_of_week="friday"),
+    },
+    # Saturday 04:00 — Meta-learning: evaluate predictions + tune weights
+    "weekly-meta-learning": {
+        "task":     "data_ingestion.queue.agent_tasks.run_meta_learning_cycle",
+        "schedule": crontab(hour=4, minute=0, day_of_week="saturday"),
+    },
+    # Sunday 05:00 — Weekly intelligence report (Claude-generated narrative)
+    "weekly-intelligence-report": {
+        "task":     "data_ingestion.queue.agent_tasks.run_weekly_report",
+        "schedule": crontab(hour=5, minute=0, day_of_week="sunday"),
+    },
+
+    # ── AUTONOMOUS DOCS UPDATE (after weekly report) ───────────────────────────
+    # Sunday 06:00 — Update README metrics badge, CONTRIBUTING stats, CHANGELOG
+    "weekly-docs-update": {
+        "task":     "data_ingestion.queue.agent_tasks.run_autonomous_docs_update",
+        "schedule": crontab(hour=6, minute=0, day_of_week="sunday"),
+    },
+
+    # ── MONTHLY INDEX PUBLICATION ──────────────────────────────────────────────
+    # 1st of every month 06:00 UTC — Compute + publish GitKT FinTech OSS Index
+    "monthly-gitkt-index": {
+        "task":     "data_ingestion.queue.index_tasks.compute_monthly_index",
+        "schedule": crontab(day_of_month="1", hour="6", minute="0"),
     },
 }

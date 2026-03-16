@@ -23,7 +23,7 @@ Claude AI was used as a development accelerator. The concept, design, and method
 
 ```bash
 # 1. Clone and enter
-git clone https://github.com/nitheshh405/GitKT
+git clone https://github.com/nitheshh405/The-Bloomberg-Terminal-for-Open-Source-FinTech
 cd GitKT
 
 # 2. Start services (Neo4j + Redis + API + Dashboard)
@@ -284,7 +284,7 @@ New to FinTech regulations? Here is what the platform tracks:
 
 - **GitHub Discussions** — architecture questions, agent ideas
 - **Issues** — bug reports, new framework requests
-- **Roadmap** — see [Projects tab](https://github.com/nitheshh405/GitKT/projects)
+- **Roadmap** — see [Projects tab](https://github.com/nitheshh405/The-Bloomberg-Terminal-for-Open-Source-FinTech/projects)
 
 > *"This platform is built for the developer community and financial institutions — every contribution makes the FinTech ecosystem more transparent, accessible, and intelligent."*
 > — Nithesh Gudipuri, Creator
