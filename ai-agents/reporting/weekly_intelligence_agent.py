@@ -15,7 +15,7 @@ import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from ai_agents.base.base_agent import AgentResult, BaseAgent
 
@@ -85,10 +85,14 @@ class WeeklyIntelligenceAgent(BaseAgent):
 
     # ── Intelligence data gathering ───────────────────────────────────────────
 
+    def _safe_query_result(self, result: Optional[List]) -> List:
+        """Safely return query results, defaulting to empty list if None."""
+        return result if result is not None else []
+
     async def _gather_intelligence(self) -> Dict:
         intel = {}
 
-        intel["top_repos"] = await self._neo4j_query("""
+        intel["top_repos"] = self._safe_query_result(await self._neo4j_query("""
             MATCH (r:Repository)
             WHERE r.innovation_score IS NOT NULL
             RETURN r.full_name AS name, r.innovation_score AS score,
@@ -98,18 +102,18 @@ class WeeklyIntelligenceAgent(BaseAgent):
                    r.description AS description
             ORDER BY r.innovation_score DESC
             LIMIT 20
-        """)
+        """))
 
-        intel["high_disruption"] = await self._neo4j_query("""
+        intel["high_disruption"] = self._safe_query_result(await self._neo4j_query("""
             MATCH (r:Repository)
             WHERE r.disruption_score >= 70
             RETURN r.full_name AS name, r.disruption_score AS score,
                    r.primary_sector AS sector, r.stars AS stars
             ORDER BY r.disruption_score DESC
             LIMIT 10
-        """)
+        """))
 
-        intel["top_startup_opportunities"] = await self._neo4j_query("""
+        intel["top_startup_opportunities"] = self._safe_query_result(await self._neo4j_query("""
             MATCH (r:Repository)
             WHERE r.startup_score >= 65
             RETURN r.full_name AS name, r.startup_score AS score,
@@ -117,34 +121,34 @@ class WeeklyIntelligenceAgent(BaseAgent):
                    r.fintech_domains AS domains
             ORDER BY r.startup_score DESC
             LIMIT 10
-        """)
+        """))
 
-        intel["growing_technologies"] = await self._neo4j_query("""
+        intel["growing_technologies"] = self._safe_query_result(await self._neo4j_query("""
             MATCH (t:Technology)<-[:IMPLEMENTS]-(r:Repository)
             RETURN t.name AS technology, t.category AS category,
                    count(r) AS repo_count,
                    avg(r.innovation_score) AS avg_score
             ORDER BY repo_count DESC
             LIMIT 15
-        """)
+        """))
 
-        intel["sector_distribution"] = await self._neo4j_query("""
+        intel["sector_distribution"] = self._safe_query_result(await self._neo4j_query("""
             MATCH (r:Repository)-[:RELEVANT_TO]->(fs:FinancialSector)
             RETURN fs.name AS sector, count(r) AS repo_count,
                    avg(r.innovation_score) AS avg_innovation_score
             ORDER BY repo_count DESC
-        """)
+        """))
 
-        intel["regtech_signals"] = await self._neo4j_query("""
+        intel["regtech_signals"] = self._safe_query_result(await self._neo4j_query("""
             MATCH (r:Repository)-[:SUPPORTS_COMPLIANCE]->(rl:Regulation)
             WHERE r.regulatory_relevance_score >= 60
             RETURN r.full_name AS repo, rl.name AS regulation,
                    r.regulatory_relevance_score AS relevance_score
             ORDER BY r.regulatory_relevance_score DESC
             LIMIT 15
-        """)
+        """))
 
-        intel["contributor_hotspots"] = await self._neo4j_query("""
+        intel["contributor_hotspots"] = self._safe_query_result(await self._neo4j_query("""
             MATCH (d:Developer)-[:CONTRIBUTED_TO]->(r:Repository)
             WHERE d.location IS NOT NULL AND d.location <> ""
             WITH d.location AS location, count(distinct r) AS repo_count,
@@ -153,20 +157,20 @@ class WeeklyIntelligenceAgent(BaseAgent):
             RETURN location, repo_count, avg_score
             ORDER BY repo_count DESC
             LIMIT 15
-        """)
+        """))
 
-        intel["new_repos_this_week"] = await self._neo4j_query("""
+        intel["new_repos_this_week"] = self._safe_query_result(await self._neo4j_query("""
             MATCH (r:Repository)
             WHERE r.last_ingested_at >= datetime() - duration({days: 7})
             RETURN count(r) AS count
-        """)
+        """))
 
-        intel["platform_stats"] = await self._neo4j_query("""
+        intel["platform_stats"] = self._safe_query_result(await self._neo4j_query("""
             MATCH (r:Repository) WITH count(r) AS total_repos
             MATCH (d:Developer) WITH total_repos, count(d) AS total_devs
             MATCH (t:Technology) WITH total_repos, total_devs, count(t) AS total_techs
             RETURN total_repos, total_devs, total_techs
-        """)
+        """))
 
         return intel
 
@@ -194,8 +198,11 @@ class WeeklyIntelligenceAgent(BaseAgent):
 
     def _generate_template_report(self, intel: Dict, date_str: str) -> str:
         """Fallback template-based report when AI is unavailable."""
-        stats = intel.get("platform_stats", [{}])[0] if intel.get("platform_stats") else {}
-        new_repos = intel.get("new_repos_this_week", [{}])[0] if intel.get("new_repos_this_week") else {}
+        platform_stats = intel.get("platform_stats") or []
+        stats = platform_stats[0] if platform_stats else {}
+        
+        new_repos_list = intel.get("new_repos_this_week") or []
+        new_repos = new_repos_list[0] if new_repos_list else {}
 
         lines = [
             self._report_header(date_str, intel),
@@ -213,7 +220,7 @@ class WeeklyIntelligenceAgent(BaseAgent):
             "|---|---|---|---|---|",
         ]
 
-        for r in intel.get("top_repos", [])[:10]:
+        for r in (intel.get("top_repos") or [])[:10]:
             lines.append(
                 f"| [{r.get('name','')}] | {r.get('sector','')} | "
                 f"{r.get('stars',0):,} | {r.get('score',0):.1f} | {r.get('disruption',0):.1f} |"
@@ -227,7 +234,7 @@ class WeeklyIntelligenceAgent(BaseAgent):
             "|---|---|---|",
         ]
 
-        for r in intel.get("high_disruption", []):
+        for r in (intel.get("high_disruption") or []):
             lines.append(
                 f"| {r.get('name','')} | {r.get('sector','')} | **{r.get('score',0):.1f}** |"
             )
@@ -240,7 +247,7 @@ class WeeklyIntelligenceAgent(BaseAgent):
             "|---|---|---|",
         ]
 
-        for r in intel.get("top_startup_opportunities", []):
+        for r in (intel.get("top_startup_opportunities") or []):
             lines.append(
                 f"| {r.get('name','')} | {r.get('sector','')} | {r.get('score',0):.1f} |"
             )
@@ -253,7 +260,7 @@ class WeeklyIntelligenceAgent(BaseAgent):
             "|---|---|---|---|",
         ]
 
-        for t in intel.get("growing_technologies", []):
+        for t in (intel.get("growing_technologies") or []):
             lines.append(
                 f"| {t.get('technology','')} | {t.get('category','')} | "
                 f"{t.get('repo_count',0)} | {t.get('avg_score',0):.1f} |"
@@ -267,7 +274,7 @@ class WeeklyIntelligenceAgent(BaseAgent):
             "|---|---|---|",
         ]
 
-        for r in intel.get("regtech_signals", []):
+        for r in (intel.get("regtech_signals") or []):
             lines.append(
                 f"| {r.get('repo','')} | {r.get('regulation','')} | {r.get('relevance_score',0):.1f} |"
             )
@@ -291,12 +298,12 @@ class WeeklyIntelligenceAgent(BaseAgent):
         import json
         # Truncate for prompt efficiency
         summary = {
-            "top_repos": intel.get("top_repos", [])[:10],
-            "high_disruption": intel.get("high_disruption", []),
-            "startup_opportunities": intel.get("top_startup_opportunities", []),
-            "growing_technologies": intel.get("growing_technologies", [])[:10],
-            "regtech_signals": intel.get("regtech_signals", [])[:8],
-            "platform_stats": intel.get("platform_stats", []),
+            "top_repos": (intel.get("top_repos") or [])[:10],
+            "high_disruption": intel.get("high_disruption") or [],
+            "startup_opportunities": intel.get("top_startup_opportunities") or [],
+            "growing_technologies": (intel.get("growing_technologies") or [])[:10],
+            "regtech_signals": (intel.get("regtech_signals") or [])[:8],
+            "platform_stats": intel.get("platform_stats") or [],
         }
         return json.dumps(summary, indent=2, default=str)
 
