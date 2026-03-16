@@ -22,7 +22,7 @@ How it works
 Configuration (via environment variables)
 ──────────────────────────────────────────
   OIDC_ISSUER_URL      e.g. https://login.microsoftonline.com/{tenant}/v2.0
-  OIDC_AUDIENCE        e.g. api://gitkt-platform  (App ID URI in Azure AD)
+  OIDC_AUDIENCE        e.g. api://fit-platform  (App ID URI in Azure AD)
   OIDC_JWKS_URI        optional — overrides auto-discovery
   AUTH_ENABLED         set to "false" to bypass auth in local dev
 """
@@ -172,7 +172,7 @@ async def get_current_user(
         # Dev bypass — synthetic superuser
         return AuthenticatedUser({
             "sub": "dev-user",
-            "email": "dev@gitkt.local",
+            "email": "dev@fit.local",
             "name": "Dev User",
             "roles": ["admin", "compliance_officer", "analyst"],
         })

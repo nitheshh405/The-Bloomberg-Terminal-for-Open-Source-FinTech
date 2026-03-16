@@ -1,4 +1,4 @@
-# GitKT
+# FinTech Intelligence Terminal
 ### The Bloomberg Terminal for Open-Source FinTech — Built for the Dev Community
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -36,7 +36,7 @@
 
 The global financial system is being rewritten in open source. Thousands of developers are quietly building the infrastructure, tooling, and protocols that will power the next generation of banking, payments, compliance, and capital markets — and almost nobody is watching.
 
-**GitKT** is my answer to that problem.
+**FinTech Intelligence Terminal** is my answer to that problem.
 
 I built this platform to do one thing: **map the knowledge hidden inside every public Git repository** — and turn it into actionable intelligence for the people who shape financial markets.
 
@@ -46,7 +46,7 @@ This is not a GitHub analytics tool. This is a **real-time intelligence operatio
 
 ## What This Is
 
-**GitKT** is a next-generation autonomous AI intelligence platform that:
+**FinTech Intelligence Terminal** is a next-generation autonomous AI intelligence platform that:
 
 - Continuously mines GitHub, GitLab, and Bitbucket for emerging FinTech repositories
 - Builds a living knowledge graph connecting repositories, developers, organizations, technologies, regulators, and regulations
@@ -79,7 +79,7 @@ This is not a GitHub analytics tool. This is a **real-time intelligence operatio
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         GitKT Platform                          │
+│                         FinTech Intelligence Terminal                        ││
 ├─────────────┬──────────────────┬──────────────────┬─────────────┤
 │  Data Layer │   AI Agent Layer │  Analysis Layer  │  API Layer  │
 ├─────────────┼──────────────────┼──────────────────┼─────────────┤
@@ -109,7 +109,7 @@ This is not a GitHub analytics tool. This is a **real-time intelligence operatio
 ## Repository Structure
 
 ```
-GitKT/
+The-Bloomberg-Terminal-for-Open-Source-FinTech/
 ├── data-ingestion/
 │   ├── repository-discovery/    # GitHub/GitLab/Bitbucket scrapers
 │   ├── metadata-collector/      # Repo stats, commit history, topics
@@ -158,7 +158,7 @@ GitKT/
 ```bash
 # 1. Clone
 git clone https://github.com/nitheshh405/The-Bloomberg-Terminal-for-Open-Source-FinTech.git
-cd GitKT
+cd The-Bloomberg-Terminal-for-Open-Source-FinTech
 
 # 2. Configure environment
 cp config/env.example .env
@@ -199,7 +199,7 @@ Every Monday at 06:00 UTC, the platform automatically:
 
 **Created and architected by [Nithesh Gudipuri](https://github.com/nitheshh405).**
 
-The concept, product vision, system design, and intelligence methodology behind GitKT are entirely my own. Claude AI was used as a development accelerator to implement the architecture I specified — translating my vision into working code at speed.
+The concept, product vision, system design, and intelligence methodology behind the FinTech Intelligence Terminal are entirely my own. Claude AI was used as a development accelerator to implement the architecture I specified — translating my vision into working code at speed.
 
 This project is an expression of a core belief: *the most valuable financial intelligence isn't locked behind Bloomberg terminals or hedge fund research desks — it's hiding in plain sight on GitHub, waiting for someone to map it.*
 

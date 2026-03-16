@@ -1,4 +1,4 @@
-# GitKT — System Architecture
+# FinTech Intelligence Terminal — System Architecture
 > Created and architected by **Nithesh Gudipuri**
 
 ## 1. Full System Architecture
@@ -424,12 +424,12 @@ Browser                 Azure AD / Okta              FastAPI
 
 **Role mapping (Azure AD App Roles):**
 
-| Azure AD App Role | GitKT Role | Permissions |
+| Azure AD App Role | FIT Role | Permissions |
 |---|---|---|
-| `GitKT.Admin` | `admin` | Full access |
-| `GitKT.ComplianceOfficer` | `compliance_officer` | HITL approve/reject + all reads |
-| `GitKT.Analyst` | `analyst` | Read-only (repos, scores, reports) |
-| `GitKT.Developer` | `developer` | API pipeline access |
+| `FIT.Admin` | `admin` | Full access |
+| `FIT.ComplianceOfficer` | `compliance_officer` | HITL approve/reject + all reads |
+| `FIT.Analyst` | `analyst` | Read-only (repos, scores, reports) |
+| `FIT.Developer` | `developer` | API pipeline access |
 
 **Key files:**
 - `api/auth/oidc.py` — JWKS discovery, JWT validation, `get_current_user()`
@@ -439,7 +439,7 @@ Browser                 Azure AD / Okta              FastAPI
 ```bash
 AUTH_ENABLED=true
 OIDC_ISSUER_URL=https://login.microsoftonline.com/{tenant}/v2.0
-OIDC_AUDIENCE=api://gitkt-platform
+OIDC_AUDIENCE=api://fit-platform
 ```
 
 ---

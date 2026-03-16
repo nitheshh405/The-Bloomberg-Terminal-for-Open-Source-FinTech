@@ -1,7 +1,7 @@
 """
-GitKT FinTech OSS Index — Publisher
+FinTech Intelligence Terminal OSS Index — Publisher
 =====================================
-Renders a computed GitKTIndex into three publishable formats:
+Renders a computed FITIndex into three publishable formats:
 
   1. LaTeX  — arXiv-compatible .tex file (submittable to cs.IR / q-fin.CP)
   2. Markdown — GitHub README / blog post / SSRN abstract page
@@ -30,8 +30,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
-from ai_agents.reporting.gitkt_index_agent import (
-    GitKTIndex,
+from ai_agents.reporting.fit_index_agent import (
+    FITIndex,
     BreakoutPrediction,
     AcquisitionPrediction,
     TechSurge,
@@ -83,7 +83,7 @@ def _velocity_arrow(v: float) -> str:
 
 # ── LaTeX renderer ─────────────────────────────────────────────────────────────
 
-def render_latex(index: GitKTIndex) -> str:
+def render_latex(index: FITIndex) -> str:
     """
     Render a full arXiv-compatible LaTeX document for this index issue.
     Requires: pdflatex + standard CTAN packages (geometry, booktabs, xcolor, hyperref).
@@ -161,12 +161,12 @@ def render_latex(index: GitKTIndex) -> str:
         colorlinks=true,
         linkcolor=blue,
         urlcolor=blue,
-        pdftitle={{GitKT FinTech OSS Index -- {period_label}}},
+        pdftitle={{FinTech Intelligence Terminal OSS Index -- {period_label}}},
         pdfauthor={{FinTech Intelligence Terminal}},
     }}
 
     \title{{
-        \textbf{{GitKT FinTech OSS Index}}\\[0.5em]
+        \textbf{{FinTech Intelligence Terminal OSS Index}}\\[0.5em]
         \large Monthly Report -- {period_label}
     }}
     \author{{
@@ -182,7 +182,7 @@ def render_latex(index: GitKTIndex) -> str:
     \maketitle
 
     \begin{{abstract}}
-    The \textbf{{GitKT FinTech OSS Index}} is a monthly benchmark quantifying the health,
+    The \textbf{{FinTech Intelligence Terminal OSS Index}} is a monthly benchmark quantifying the health,
     momentum, compliance posture, and acquisition potential of the global open-source
     FinTech ecosystem. For \textbf{{{period_label}}}, the index tracked
     \textbf{{{index.total_repos_tracked:,}}} repositories across payment infrastructure,
@@ -226,7 +226,7 @@ def render_latex(index: GitKTIndex) -> str:
     \textbf{{{index.compliance_coverage_gap:.0f}\%}} of tracked payment repositories
     lack BSA/AML control coverage, representing a structural gap in the open-source
     FinTech supply chain. Repositories with compliance scores below the 40th percentile
-    were flagged for human-in-the-loop review via the GitKT HITL queue.
+    were flagged for human-in-the-loop review via the FIT HITL queue.
 
     %% ── Section 3: Supply-Chain Risk ──────────────────────────────────────────
     \section{{Supply-Chain Risk}}
@@ -308,7 +308,7 @@ def render_latex(index: GitKTIndex) -> str:
     (11)~ExternalSignalCorrelator, (12)~MetaLearningOrchestrator.
 
     \subsection{{Index Computation}}
-    The GitKTIndexAgent (Agent 13) aggregates outputs of all twelve agents
+    The FITIndexAgent (Agent 13) aggregates outputs of all twelve agents
     into the headline metrics. Weight parameters are auto-tuned monthly by
     the MetaLearningOrchestrator based on observed prediction accuracy.
 
@@ -322,8 +322,8 @@ def render_latex(index: GitKTIndex) -> str:
 
     \begin{{quote}}
     Gudipuri, N., \& FinTech Intelligence Terminal. ({index.published_at.year}).
-    \textit{{GitKT FinTech OSS Index -- {period_label}}}.
-    GitKT Research. \url{{https://github.com/nitheshh405/The-Bloomberg-Terminal-for-Open-Source-FinTech}}
+    \textit{{FinTech Intelligence Terminal OSS Index -- {period_label}}}.
+    FinTech Intelligence Terminal Research. \url{{https://github.com/nitheshh405/The-Bloomberg-Terminal-for-Open-Source-FinTech}}
     \end{{quote}}
 
     \vfill
@@ -339,7 +339,7 @@ def render_latex(index: GitKTIndex) -> str:
 
 # ── Markdown renderer ──────────────────────────────────────────────────────────
 
-def render_markdown(index: GitKTIndex) -> str:
+def render_markdown(index: FITIndex) -> str:
     """
     Render the index as GitHub-flavoured Markdown.
     Suitable for: GitHub README, SSRN abstract, blog post, LinkedIn article.
@@ -380,7 +380,7 @@ def render_markdown(index: GitKTIndex) -> str:
     if index.compliance_alert:
         alerts += f"\n> ⚠️ **Compliance Gap:** {index.compliance_alert}\n"
 
-    return f"""# 📊 GitKT FinTech OSS Index — {index.period}
+    return f"""# 📊 FinTech Intelligence Terminal OSS Index — {index.period}
 > *The S&P 500 equivalent for open-source FinTech health — published monthly*
 >
 > Published: {pub_date} | [Source Code](https://github.com/nitheshh405/The-Bloomberg-Terminal-for-Open-Source-FinTech)
@@ -431,7 +431,7 @@ def render_markdown(index: GitKTIndex) -> str:
 
 ## Methodology
 
-The GitKT FinTech OSS Index aggregates outputs from **12 autonomous AI agents** running
+The FinTech Intelligence Terminal OSS Index aggregates outputs from **12 autonomous AI agents** running
 continuously on a Neo4j knowledge graph of open-source FinTech repositories:
 
 | Agent | Function |
@@ -458,13 +458,13 @@ prediction accuracy. Full methodology and source code available at:
 ## How to Cite
 
 ```bibtex
-@techreport{{gitkt-index-{index.period.replace("-", "")},
+@techreport{{fit-index-{index.period.replace("-", "")},
   author  = {{Gudipuri, Nithesh and {{FinTech Intelligence Terminal}}}},
-  title   = {{GitKT FinTech OSS Index -- {index.period}}},
+  title   = {{FinTech Intelligence Terminal OSS Index -- {index.period}}},
   year    = {{{index.published_at.year}}},
   month   = {{{index.published_at.month}}},
   url     = {{https://github.com/nitheshh405/The-Bloomberg-Terminal-for-Open-Source-FinTech}},
-  note    = {{Generated autonomously by the GitKT AI swarm}}
+  note    = {{Generated autonomously by the FinTech Intelligence Terminal AI swarm}}
 }}
 ```
 
@@ -476,7 +476,7 @@ regulatory sandbox registries. Licensed under [CC BY 4.0](https://creativecommon
 
 # ── JSON renderer ──────────────────────────────────────────────────────────────
 
-def render_json(index: GitKTIndex, indent: int = 2) -> str:
+def render_json(index: FITIndex, indent: int = 2) -> str:
     """Render the index as a clean JSON string (for API responses and archiving)."""
     return json.dumps(index.to_dict(), indent=indent, default=str)
 
@@ -490,9 +490,9 @@ class IndexPublisher:
     Directory layout:
         {output_dir}/
             {period}/
-                gitkt-index-{period}.tex      ← arXiv submission
-                gitkt-index-{period}.md       ← GitHub / SSRN abstract
-                gitkt-index-{period}.json     ← API archive
+                fit-index-{period}.tex      ← arXiv submission
+                fit-index-{period}.md       ← GitHub / SSRN abstract
+                fit-index-{period}.json     ← API archive
 
     Usage:
         pub = IndexPublisher("/path/to/reports")
@@ -503,12 +503,12 @@ class IndexPublisher:
     def __init__(self, output_dir: str = "automation/index-reports") -> None:
         self.output_dir = Path(output_dir)
 
-    def publish(self, index: GitKTIndex) -> dict:
+    def publish(self, index: FITIndex) -> dict:
         """Write all three formats. Returns dict of {format: path}."""
         issue_dir = self.output_dir / index.period
         issue_dir.mkdir(parents=True, exist_ok=True)
 
-        stem  = f"gitkt-index-{index.period}"
+        stem  = f"fit-index-{index.period}"
         paths = {}
 
         # LaTeX

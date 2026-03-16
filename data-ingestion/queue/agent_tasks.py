@@ -1,7 +1,7 @@
 """
 Agent Intelligence Cycle — Celery Tasks
 =========================================
-Orchestrates the weekly autonomous intelligence cycle for all 13 GitKT agents.
+Orchestrates the weekly autonomous intelligence cycle for all 14 autonomous AI agents.
 Each task is independently retryable and idempotent.
 
 Full weekly schedule (defined in celery_app.py beat_schedule):
@@ -15,7 +15,7 @@ Full weekly schedule (defined in celery_app.py beat_schedule):
   Sun 05:00  Report           — Claude narrative weekly report (Agent 9)
   Sun 06:00  Docs update      — auto-update README/CONTRIBUTING/CHANGELOG (Agent 14)
 
-  1st/month 06:00  Index — GitKT FinTech OSS Index publication (Agent 13)
+  1st/month 06:00  Index — FinTech Intelligence Terminal OSS Index publication (Agent 13)
 
 Each task is independent — failure in one day does not block the others.
 """

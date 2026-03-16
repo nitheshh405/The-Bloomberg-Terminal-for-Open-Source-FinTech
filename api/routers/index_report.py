@@ -1,5 +1,5 @@
 """
-GitKT FinTech OSS Index — REST API
+FinTech Intelligence Terminal OSS Index — REST API
 ====================================
 Endpoints for fetching, previewing, and downloading monthly index reports.
 
@@ -71,7 +71,7 @@ class AcquisitionOut(BaseModel):
     rationale:        str
 
 
-class GitKTIndexOut(BaseModel):
+class FITIndexOut(BaseModel):
     period:                   str
     published_at:             str
     total_repos_tracked:      int
@@ -120,10 +120,10 @@ def _index_not_found(period: str):
 
 
 def _load_index_from_neo4j(driver, period: str) -> Optional[Dict[str, Any]]:
-    """Read a stored GitKTIndex node from Neo4j by period."""
+    """Read a stored FITIndex node from Neo4j by period."""
     import json as _json
     _Q = """
-    MATCH (idx:GitKTIndex {period: $period})
+    MATCH (idx:FITIndex {period: $period})
     RETURN idx.index_json AS json_str, idx.period AS period
     """
     try:
@@ -136,10 +136,10 @@ def _load_index_from_neo4j(driver, period: str) -> Optional[Dict[str, Any]]:
     return None
 
 
-def _index_to_out(d: Dict[str, Any]) -> GitKTIndexOut:
+def _index_to_out(d: Dict[str, Any]) -> FITIndexOut:
     """Convert a raw index dict to the Pydantic output model."""
-    from ai_agents.reporting.gitkt_index_agent import (
-        GitKTIndex, BreakoutPrediction, AcquisitionPrediction, TechSurge
+    from ai_agents.reporting.fit_index_agent import (
+        FITIndex, BreakoutPrediction, AcquisitionPrediction, TechSurge
     )
     from datetime import datetime, timezone
 
@@ -147,7 +147,7 @@ def _index_to_out(d: Dict[str, Any]) -> GitKTIndexOut:
     breakouts = [BreakoutPrediction(**b) for b in d.get("predicted_breakout_repos", [])]
     acquisitions = [AcquisitionPrediction(**a) for a in d.get("predicted_acquisitions", [])]
 
-    idx = GitKTIndex(
+    idx = FITIndex(
         period                   = d["period"],
         published_at             = datetime.fromisoformat(d["published_at"]),
         total_repos_tracked      = d["total_repos_tracked"],
@@ -166,7 +166,7 @@ def _index_to_out(d: Dict[str, Any]) -> GitKTIndexOut:
         predicted_acquisitions   = acquisitions,
     )
 
-    return GitKTIndexOut(
+    return FITIndexOut(
         period                   = idx.period,
         published_at             = idx.published_at.isoformat(),
         total_repos_tracked      = idx.total_repos_tracked,
@@ -213,10 +213,10 @@ def _index_to_out(d: Dict[str, Any]) -> GitKTIndexOut:
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
-@router.get("/latest", response_model=GitKTIndexOut, summary="Get current month's index")
+@router.get("/latest", response_model=FITIndexOut, summary="Get current month's index")
 async def get_latest_index():
     """
-    Returns the most recently computed GitKT FinTech OSS Index.
+    Returns the most recently computed FinTech Intelligence Terminal OSS Index.
     If the current month has not been computed yet, returns last month's.
     """
     driver = _get_driver()
@@ -234,10 +234,10 @@ async def get_latest_index():
     )
 
 
-@router.get("/{year}/{month}", response_model=GitKTIndexOut, summary="Get index for a specific month")
+@router.get("/{year}/{month}", response_model=FITIndexOut, summary="Get index for a specific month")
 async def get_index_by_period(year: int, month: int):
     """
-    Fetch the GitKT Index for a specific year/month (e.g. /2026/03).
+    Fetch the FIT Index for a specific year/month (e.g. /2026/03).
     """
     if not (2024 <= year <= 2100 and 1 <= month <= 12):
         raise HTTPException(status_code=400, detail="Invalid year or month")
@@ -263,8 +263,8 @@ async def get_index_history(limit: int = Query(default=12, ge=1, le=60)):
         return []
 
     try:
-        from ai_agents.reporting.gitkt_index_agent import GitKTIndexAgent
-        agent   = GitKTIndexAgent(driver)
+        from ai_agents.reporting.fit_index_agent import FITIndexAgent
+        agent   = FITIndexAgent(driver)
         records = agent.get_historical(limit=limit)
         return [
             HistoricalRow(
@@ -298,13 +298,13 @@ async def get_latest_index_markdown():
 
     idx_out = _index_to_out(data)
     # Re-render markdown from the stored data
-    from ai_agents.reporting.gitkt_index_agent import (
-        GitKTIndex, TechSurge, BreakoutPrediction, AcquisitionPrediction
+    from ai_agents.reporting.fit_index_agent import (
+        FITIndex, TechSurge, BreakoutPrediction, AcquisitionPrediction
     )
     from ai_agents.reporting.index_publisher import render_markdown
     from datetime import datetime as _dt
 
-    idx = GitKTIndex(
+    idx = FITIndex(
         period                   = data["period"],
         published_at             = _dt.fromisoformat(data["published_at"]),
         total_repos_tracked      = data["total_repos_tracked"],
@@ -340,10 +340,10 @@ async def trigger_index_computation(period: Optional[str] = None):
         )
 
     try:
-        from ai_agents.reporting.gitkt_index_agent import GitKTIndexAgent
+        from ai_agents.reporting.fit_index_agent import FITIndexAgent
         from ai_agents.reporting.index_publisher import IndexPublisher
 
-        agent = GitKTIndexAgent(driver)
+        agent = FITIndexAgent(driver)
         index = agent.run(period=period)
 
         # Also write files to disk
@@ -358,7 +358,7 @@ async def trigger_index_computation(period: Optional[str] = None):
             breakouts_found    = len(index.predicted_breakout_repos),
             acquisitions_found = len(index.predicted_acquisitions),
             message            = (
-                f"GitKT FinTech OSS Index {index.period} computed and saved. "
+                f"FinTech Intelligence Terminal OSS Index {index.period} computed and saved. "
                 f"Files: {list(paths.values())}"
             ),
         )

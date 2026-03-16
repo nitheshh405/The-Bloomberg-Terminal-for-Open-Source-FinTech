@@ -335,7 +335,7 @@ async def estimate_job_postings(
             session = aiohttp.ClientSession()
 
         headers = {
-            "User-Agent": "GitKT-FinTech-Intelligence/1.0 (research; noreply@gitkt.io)"
+            "User-Agent": "FinTech-Intelligence-Terminal/1.0 (research; noreply@fit.local)"
         }
         async with session.get(
             rss_url,

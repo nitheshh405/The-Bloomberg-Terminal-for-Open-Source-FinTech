@@ -1,5 +1,5 @@
 """
-GitKT FinTech OSS Index — Computation Agent
+FinTech Intelligence Terminal OSS Index — Computation Agent
 ============================================
 Produces the monthly "S&P 500 for open-source FinTech health" by aggregating
 intelligence from all 12 agents already running in the platform.
@@ -16,7 +16,7 @@ Published metrics (each issue)
 
 Neo4j model (written by this agent)
 ─────────────────────────────────────
-  (GitKTIndex {
+  (FITIndex {
       period:                     "2026-03",   ← YYYY-MM
       published_at:               datetime,
       total_repos_tracked:        int,
@@ -27,9 +27,9 @@ Neo4j model (written by this agent)
       active_contributors_30d:    int,
       regulatory_gaps_detected:   int,
   })
-  (GitKTIndex)-[:FEATURES_BREAKOUT]->(Repository)
-  (GitKTIndex)-[:FLAGS_ACQUISITION]->(Repository)
-  (GitKTIndex)-[:HIGHLIGHTS_SURGE]->(Technology)
+  (FITIndex)-[:FEATURES_BREAKOUT]->(Repository)
+  (FITIndex)-[:FLAGS_ACQUISITION]->(Repository)
+  (FITIndex)-[:HIGHLIGHTS_SURGE]->(Technology)
 """
 
 from __future__ import annotations
@@ -85,9 +85,9 @@ class AcquisitionPrediction:
 
 
 @dataclass
-class GitKTIndex:
+class FITIndex:
     """
-    One monthly edition of the GitKT FinTech OSS Index.
+    One monthly edition of the FinTech Intelligence Terminal OSS Index.
     All fields are pure data — no Neo4j driver references.
     """
     period:                   str            # "2026-03"
@@ -123,7 +123,7 @@ class GitKTIndex:
     @property
     def headline(self) -> str:
         return (
-            f"GitKT FinTech OSS Index — {self.period}\n"
+            f"FinTech Intelligence Terminal OSS Index — {self.period}\n"
             f"  Total repositories tracked:    {self.total_repos_tracked:,}\n"
             f"  Innovation velocity (30-day):  {self.innovation_velocity_30d:+.1f}%\n"
             f"  Compliance coverage gap:        {self.compliance_coverage_gap:.0f}% of payment repos lack BSA controls\n"
@@ -249,7 +249,7 @@ RETURN max(r.disruption_score) AS max_score
 """
 
 _Q_SAVE_INDEX = """
-MERGE (idx:GitKTIndex {period: $period})
+MERGE (idx:FITIndex {period: $period})
 SET
     idx.published_at             = datetime($published_at),
     idx.total_repos_tracked      = $total_repos_tracked,
@@ -267,25 +267,25 @@ RETURN idx.period AS period
 """
 
 _Q_LINK_BREAKOUT = """
-MATCH (idx:GitKTIndex {period: $period})
+MATCH (idx:FITIndex {period: $period})
 MATCH (r:Repository {id: $repo_id})
 MERGE (idx)-[:FEATURES_BREAKOUT]->(r)
 """
 
 _Q_LINK_ACQUISITION = """
-MATCH (idx:GitKTIndex {period: $period})
+MATCH (idx:FITIndex {period: $period})
 MATCH (r:Repository {id: $repo_id})
 MERGE (idx)-[:FLAGS_ACQUISITION]->(r)
 """
 
 _Q_LINK_SURGE = """
-MATCH (idx:GitKTIndex {period: $period})
+MATCH (idx:FITIndex {period: $period})
 MATCH (t:Technology {name: $tech_name})
 MERGE (idx)-[:HIGHLIGHTS_SURGE]->(t)
 """
 
 _Q_HISTORICAL = """
-MATCH (idx:GitKTIndex)
+MATCH (idx:FITIndex)
 RETURN
     idx.period                   AS period,
     idx.published_at             AS published_at,
@@ -355,22 +355,22 @@ def rank_surges(surges: List[TechSurge], top_n: int = 5) -> List[TechSurge]:
 
 # ── Agent class ────────────────────────────────────────────────────────────────
 
-class GitKTIndexAgent:
+class FITIndexAgent:
     """
-    Computes and publishes the monthly GitKT FinTech OSS Index.
+    Computes and publishes the monthly FinTech Intelligence Terminal OSS Index.
 
     Usage:
-        agent = GitKTIndexAgent(neo4j_driver)
+        agent = FITIndexAgent(neo4j_driver)
         index = agent.compute(period="2026-03")
         agent.save(index)
         print(index.headline)
 
     The agent is purely read-intensive from Neo4j (it aggregates data written
-    by Agents 1–12) and writes a single (GitKTIndex) node per month.
+    by Agents 1–12) and writes a single (FITIndex) node per month.
     """
 
-    agent_id   = "gitkt_index_agent"
-    agent_name = "GitKTIndexAgent"
+    agent_id   = "fit_index_agent"
+    agent_name = "FITIndexAgent"
     version    = "1.0.0"
 
     def __init__(self, neo4j_driver) -> None:
@@ -378,9 +378,9 @@ class GitKTIndexAgent:
 
     # ── Public API ─────────────────────────────────────────────────────────────
 
-    def compute(self, period: Optional[str] = None) -> GitKTIndex:
+    def compute(self, period: Optional[str] = None) -> FITIndex:
         """
-        Aggregate all agent outputs into one GitKTIndex for the given period.
+        Aggregate all agent outputs into one FITIndex for the given period.
         period: "YYYY-MM" — defaults to current month.
         """
         now     = datetime.now(timezone.utc)
@@ -474,7 +474,7 @@ class GitKTIndexAgent:
             if comp_gap >= 15 else ""
         )
 
-        return GitKTIndex(
+        return FITIndex(
             period                   = period,
             published_at             = now,
             total_repos_tracked      = total_repos,
@@ -493,7 +493,7 @@ class GitKTIndexAgent:
             compliance_alert         = comp_alert,
         )
 
-    def save(self, index: GitKTIndex) -> None:
+    def save(self, index: FITIndex) -> None:
         """Persist the index to Neo4j and link breakout/acquisition repos."""
         with self._driver.session() as s:
             s.run(
@@ -519,7 +519,7 @@ class GitKTIndexAgent:
             for surge in index.emerging_surges:
                 s.run(_Q_LINK_SURGE, period=index.period, tech_name=surge.tech_name)
 
-        logger.info("GitKT Index %s saved (%d repos, velocity %+.1f%%)",
+        logger.info("FIT Index %s saved (%d repos, velocity %+.1f%%)",
                     index.period, index.total_repos_tracked, index.innovation_velocity_30d)
 
     def get_historical(self, limit: int = 12) -> List[Dict[str, Any]]:
@@ -527,7 +527,7 @@ class GitKTIndexAgent:
         with self._driver.session() as s:
             return [dict(r) for r in s.run(_Q_HISTORICAL, limit=limit)]
 
-    def run(self, period: Optional[str] = None) -> GitKTIndex:
+    def run(self, period: Optional[str] = None) -> FITIndex:
         """Compute + save in one call (Celery task entrypoint)."""
         index = self.compute(period)
         self.save(index)
