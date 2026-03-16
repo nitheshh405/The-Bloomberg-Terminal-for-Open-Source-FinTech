@@ -1,5 +1,5 @@
-# GitKT — FinTech OSINT Intelligence Platform
-### Bloomberg Terminal for Open-Source FinTech Innovation
+# GitKT
+### The Bloomberg Terminal for Open-Source FinTech — Built for the Dev Community
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
