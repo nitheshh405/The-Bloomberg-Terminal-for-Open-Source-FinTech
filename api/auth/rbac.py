@@ -16,9 +16,9 @@ Role hierarchy
 
 Enterprise IdP role mapping (Azure AD example)
 ───────────────────────────────────────────────
-  Azure AD App Role "GitKT.ComplianceOfficer" → maps to "compliance_officer"
-  Azure AD App Role "GitKT.Analyst"           → maps to "analyst"
-  Azure AD Security Group "gitkt-admins"      → maps to "admin"
+  Azure AD App Role "FIT.ComplianceOfficer" → maps to "compliance_officer"
+  Azure AD App Role "FIT.Analyst"           → maps to "analyst"
+  Azure AD Security Group "fit-admins"      → maps to "admin"
 
   Configure in Azure Portal → App Registrations → App Roles
   Then assign users/groups to roles in Enterprise Applications.

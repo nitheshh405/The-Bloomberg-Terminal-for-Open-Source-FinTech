@@ -1,4 +1,4 @@
-# Contributing to GitKT
+# Contributing to FinTech Intelligence Terminal
 > The Bloomberg Terminal for Open-Source FinTech — Built for the Dev Community
 
 **Created and architected by [Nithesh Gudipuri](https://github.com/nitheshh405)**
@@ -24,7 +24,7 @@ Claude AI was used as a development accelerator. The concept, design, and method
 ```bash
 # 1. Clone and enter
 git clone https://github.com/nitheshh405/The-Bloomberg-Terminal-for-Open-Source-FinTech
-cd GitKT
+cd The-Bloomberg-Terminal-for-Open-Source-FinTech
 
 # 2. Start services (Neo4j + Redis + API + Dashboard)
 docker compose up          # installs everything automatically
@@ -41,7 +41,7 @@ The API docs open at **http://localhost:8000/api/docs**
 ## Repository Map
 
 ```
-GitKT/
+The-Bloomberg-Terminal-for-Open-Source-FinTech/
 │
 ├── ai-agents/                  ← 10 autonomous AI agents (extend here)
 │   ├── base/base_agent.py      ← BaseAgent — inherit this for any new agent
@@ -188,13 +188,13 @@ AUTH_ENABLED=false   # in .env — all requests run as synthetic admin
 ```bash
 AUTH_ENABLED=true
 OIDC_ISSUER_URL=https://login.microsoftonline.com/{your-tenant-id}/v2.0
-OIDC_AUDIENCE=api://gitkt-platform
+OIDC_AUDIENCE=api://fit-platform
 ```
 
-Then create App Roles in Azure AD → App Registrations → GitKT → App roles:
-- `GitKT.Admin` → maps to role `admin`
-- `GitKT.ComplianceOfficer` → maps to role `compliance_officer`
-- `GitKT.Analyst` → maps to role `analyst`
+Then create App Roles in Azure AD → App Registrations → FinTech Intelligence Terminal → App roles:
+- `FIT.Admin` → maps to role `admin`
+- `FIT.ComplianceOfficer` → maps to role `compliance_officer`
+- `FIT.Analyst` → maps to role `analyst`
 
 To protect an endpoint:
 ```python

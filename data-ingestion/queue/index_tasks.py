@@ -1,13 +1,13 @@
 """
-GitKT FinTech OSS Index — Monthly Celery Task
+FinTech Intelligence Terminal OSS Index — Monthly Celery Task
 ===============================================
 Runs on the 1st of every month at 06:00 UTC.
 
-  compute_monthly_index   — aggregate all agent outputs → GitKTIndex
+  compute_monthly_index   — aggregate all agent outputs → FITIndex
   publish_index_to_disk   — write .tex, .md, .json files
 
 Beat schedule (add to celery_app.py beat_schedule):
-    "monthly-gitkt-index": {
+    "monthly-fit-index": {
         "task":     "data_ingestion.queue.index_tasks.compute_monthly_index",
         "schedule": crontab(day_of_month=1, hour=6, minute=0),
     }
@@ -45,7 +45,7 @@ try:
     )
     def compute_monthly_index(self, period: Optional[str] = None) -> dict:
         """
-        Monthly Celery task: compute + save + publish the GitKT FinTech OSS Index.
+        Monthly Celery task: compute + save + publish the FinTech Intelligence Terminal OSS Index.
 
         Triggered automatically on the 1st of every month at 06:00 UTC.
         Can also be triggered manually:
@@ -60,17 +60,17 @@ try:
         """
         now    = datetime.now(timezone.utc)
         period = period or now.strftime("%Y-%m")
-        logger.info("GitKT Index task started for period=%s", period)
+        logger.info("FIT Index task started for period=%s", period)
 
         driver = None
         try:
             driver = _get_neo4j_driver()
 
-            from ai_agents.reporting.gitkt_index_agent import GitKTIndexAgent
+            from ai_agents.reporting.fit_index_agent import FITIndexAgent
             from ai_agents.reporting.index_publisher import IndexPublisher
 
             # Compute
-            agent = GitKTIndexAgent(driver)
+            agent = FITIndexAgent(driver)
             index = agent.run(period=period)
 
             # Publish to disk
@@ -79,7 +79,7 @@ try:
             paths      = publisher.publish(index)
 
             logger.info(
-                "GitKT Index %s complete | repos=%d | velocity=%+.1f%% | breakouts=%d | acquisitions=%d",
+                "FIT Index %s complete | repos=%d | velocity=%+.1f%% | breakouts=%d | acquisitions=%d",
                 index.period,
                 index.total_repos_tracked,
                 index.innovation_velocity_30d,
@@ -99,7 +99,7 @@ try:
             }
 
         except Exception as exc:
-            logger.error("GitKT Index computation failed: %s", exc)
+            logger.error("FIT Index computation failed: %s", exc)
             raise self.retry(exc=exc)
 
         finally:
@@ -110,7 +110,7 @@ try:
 
     # Patch into the existing beat schedule (defined in celery_app.py)
     if hasattr(celery_app, "conf") and hasattr(celery_app.conf, "beat_schedule"):
-        celery_app.conf.beat_schedule["monthly-gitkt-index"] = {
+        celery_app.conf.beat_schedule["monthly-fit-index"] = {
             "task":     "data_ingestion.queue.index_tasks.compute_monthly_index",
             "schedule": crontab(day_of_month="1", hour="6", minute="0"),
             "kwargs":   {},
@@ -125,10 +125,10 @@ except ImportError:
         driver = _get_neo4j_driver()
 
         try:
-            from ai_agents.reporting.gitkt_index_agent import GitKTIndexAgent
+            from ai_agents.reporting.fit_index_agent import FITIndexAgent
             from ai_agents.reporting.index_publisher import IndexPublisher
 
-            agent = GitKTIndexAgent(driver)
+            agent = FITIndexAgent(driver)
             index = agent.run(period=period)
 
             publisher = IndexPublisher()

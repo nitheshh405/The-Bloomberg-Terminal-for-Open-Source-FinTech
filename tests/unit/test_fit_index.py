@@ -1,5 +1,5 @@
 """
-Unit tests — GitKT FinTech OSS Index
+Unit tests — FinTech Intelligence Terminal OSS Index
 ======================================
 Tests all pure-logic functions — no Neo4j, no HTTP, no filesystem.
 """
@@ -10,8 +10,8 @@ import json
 import pytest
 from datetime import datetime, timezone
 
-from ai_agents.reporting.gitkt_index_agent import (
-    GitKTIndex,
+from ai_agents.reporting.fit_index_agent import (
+    FITIndex,
     TechSurge,
     BreakoutPrediction,
     AcquisitionPrediction,
@@ -38,7 +38,7 @@ def _make_index(
     breakouts: int = 2,
     acquisitions: int = 1,
     surges: int = 2,
-) -> GitKTIndex:
+) -> FITIndex:
     breakout_list = [
         BreakoutPrediction(
             repo_id             = f"repo-{i}",
@@ -71,7 +71,7 @@ def _make_index(
         )
         for i in range(surges)
     ]
-    return GitKTIndex(
+    return FITIndex(
         period                   = "2026-03",
         published_at             = datetime(2026, 3, 1, 6, 0, tzinfo=timezone.utc),
         total_repos_tracked      = 47_832,
@@ -209,9 +209,9 @@ class TestRankSurges:
         assert rank_surges([]) == []
 
 
-# ── GitKTIndex dataclass ───────────────────────────────────────────────────────
+# ── FITIndex dataclass ───────────────────────────────────────────────────────
 
-class TestGitKTIndex:
+class TestFITIndex:
     def test_headline_contains_key_fields(self):
         idx = _make_index()
         h   = idx.headline

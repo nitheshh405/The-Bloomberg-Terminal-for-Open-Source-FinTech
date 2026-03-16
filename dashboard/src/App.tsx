@@ -112,7 +112,7 @@ export default function App() {
   const [chatMessages, setChatMessages] = useState([
     {
       role: "assistant" as const,
-      text: "Hello! I'm the FinTech Intelligence Terminal AI — your analyst across 47,000+ open-source FinTech repositories. Ask me about emerging technologies, compliance risks, disruption signals, startup opportunities, or the monthly GitKT OSS Index.",
+      text: "Hello! I'm the FinTech Intelligence Terminal AI — your analyst across 47,000+ open-source FinTech repositories. Ask me about emerging technologies, compliance risks, disruption signals, startup opportunities, or the monthly FinTech Intelligence Terminal OSS Index.",
     },
   ]);
   const chatEndRef = useRef<HTMLDivElement>(null);

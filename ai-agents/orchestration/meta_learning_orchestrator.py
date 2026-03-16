@@ -563,9 +563,9 @@ class MetaLearningOrchestrator:
         reports = self.compute_accuracy_reports()
 
         lines = [
-            "# GitKT Prediction Accuracy Study",
+            "# FIT Prediction Accuracy Study",
             f"Generated: {datetime.now(timezone.utc).date()}",
-            "Platform: GitKT — Bloomberg Terminal for Open-Source FinTech",
+            "Platform: FinTech Intelligence Terminal — Bloomberg Terminal for Open-Source FinTech",
             "Architect: Nithesh Gudipuri",
             "",
             "## Methodology",

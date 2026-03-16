@@ -204,7 +204,7 @@ class TestAutonomousDocsAgentFiles:
 
     def _setup_repo(self, tmp_path: Path, include_sentinels: bool = True) -> Path:
         readme_content = (
-            "# GitKT\n\n"
+            "# FinTech Intelligence Terminal\n\n"
             "## Live Metrics\n\n"
             "| Metric | Value |\n"
             "|--------|-------|\n"

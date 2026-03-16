@@ -1,7 +1,7 @@
 """
 Agent 11 — FutureSignalAgent
 ==============================
-Transforms GitKT from a snapshot tool into a predictive intelligence platform.
+Transforms the platform from a snapshot tool into a predictive intelligence platform.
 
 Core insight: a repo moving 40 → 55 → 71 over 6 months is MORE valuable
 than a static score of 75, because it signals accelerating adoption momentum.

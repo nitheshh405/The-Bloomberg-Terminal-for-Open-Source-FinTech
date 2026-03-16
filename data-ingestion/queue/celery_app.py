@@ -33,13 +33,13 @@ BROKER_URL  = os.getenv("CELERY_BROKER_URL",  "redis://localhost:6379/0")
 RESULT_URL  = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
 
 app = Celery(
-    "gitkt_ingestion",
+    "fit_ingestion",
     broker=BROKER_URL,
     backend=RESULT_URL,
     include=[
         "data_ingestion.queue.ingestion_tasks",   # GitHub repo ingestion
         "data_ingestion.queue.agent_tasks",        # AI agent runs (scoring, signals, etc.)
-        "data_ingestion.queue.index_tasks",        # Monthly GitKT OSS Index
+        "data_ingestion.queue.index_tasks",        # Monthly FinTech Intelligence Terminal OSS Index
     ],
 )
 
@@ -123,8 +123,8 @@ app.conf.beat_schedule = {
     },
 
     # ── MONTHLY INDEX PUBLICATION ──────────────────────────────────────────────
-    # 1st of every month 06:00 UTC — Compute + publish GitKT FinTech OSS Index
-    "monthly-gitkt-index": {
+    # 1st of every month 06:00 UTC — Compute + publish FinTech Intelligence Terminal OSS Index
+    "monthly-fit-index": {
         "task":     "data_ingestion.queue.index_tasks.compute_monthly_index",
         "schedule": crontab(day_of_month="1", hour="6", minute="0"),
     },

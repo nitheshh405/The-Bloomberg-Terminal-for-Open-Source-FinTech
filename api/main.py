@@ -57,7 +57,7 @@ app.include_router(intelligence.router, prefix="/api/v1/intelligence", tags=["In
 app.include_router(search.router, prefix="/api/v1/search", tags=["Search"])
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["Conversational AI"])
 app.include_router(hitl_review.router, prefix="/api/v1/hitl", tags=["HITL Compliance Review"])
-app.include_router(index_report.router, prefix="/api/v1/index", tags=["GitKT FinTech OSS Index"])
+app.include_router(index_report.router, prefix="/api/v1/index", tags=["FinTech Intelligence Terminal OSS Index"])
 
 
 @app.get("/api/v1/health", tags=["Health"])
