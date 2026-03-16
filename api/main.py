@@ -21,6 +21,7 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Manage application lifecycle events."""
     logger.info("Starting %s v%s", settings.app_name, settings.app_version)
     yield
     logger.info("Shutting down %s", settings.app_name)
@@ -60,6 +61,21 @@ app.include_router(hitl_review.router, prefix="/api/v1/hitl", tags=["HITL Compli
 app.include_router(index_report.router, prefix="/api/v1/index", tags=["FinTech Intelligence Terminal OSS Index"])
 
 
-@app.get("/api/v1/health", tags=["Health"])
-async def health_check():
-    return {"status": "healthy", "version": settings.app_version}
+@app.get(
+    "/api/v1/health",
+    tags=["Health"],
+    summary="Health Check",
+    response_description="Returns the health status and version of the API",
+)
+async def health_check() -> dict[str, str]:
+    """
+    Perform a health check on the API.
+
+    Returns:
+        dict: A dictionary containing the health status and application version.
+    """
+    return {
+        "status": "healthy",
+        "version": settings.app_version,
+        "app_name": settings.app_name,
+    }
