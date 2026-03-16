@@ -32,7 +32,7 @@ app = FastAPI(
     description="Bloomberg Terminal for Open-Source FinTech Innovation",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json",
+    openapi_url="/openapi.json",
     lifespan=lifespan,
 )
 
